@@ -60,7 +60,37 @@ fun InstrumentsApp(container: AppContainer) {
         }
     }
 
-    if (settings == null) return // settings still loading from DataStore
+    // Designer splash: plays its intro + one loading loop minimum, resolves
+    // once persisted settings are loaded, then fades into the app.
+    com.ngg.instruments.ui.splash.SplashHost(ready = settings != null) {
+        if (settings != null) {
+            MainContent(
+                container = container,
+                settings = settings,
+                mode = mode,
+                hasLocationPermission = hasLocationPermission,
+                onRequestPermission = {
+                    permissionLauncher.launch(
+                        arrayOf(
+                            Manifest.permission.ACCESS_FINE_LOCATION,
+                            Manifest.permission.ACCESS_COARSE_LOCATION,
+                        ),
+                    )
+                },
+            )
+        }
+    }
+}
+
+@Composable
+private fun MainContent(
+    container: AppContainer,
+    settings: AppSettings,
+    mode: com.ngg.instruments.EngineMode,
+    hasLocationPermission: Boolean,
+    onRequestPermission: () -> Unit,
+) {
+    val scope = rememberCoroutineScope()
 
     var screen by remember(settings.onboardingComplete) {
         mutableStateOf(if (settings.onboardingComplete) Screen.PANEL else Screen.ONBOARDING)
@@ -80,7 +110,7 @@ fun InstrumentsApp(container: AppContainer) {
             container = container,
             settings = settings,
             hasLocationPermission = hasLocationPermission,
-            onRequestPermission = { permissionLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)) },
+            onRequestPermission = onRequestPermission,
             onSetLevel = ::setLevel,
             onEditQnh = { showQnhDialog = true },
             onDone = {
@@ -92,9 +122,7 @@ fun InstrumentsApp(container: AppContainer) {
         Screen.PANEL -> {
             // Ask for permission on entry if it was never granted.
             LaunchedEffect(Unit) {
-                if (!hasLocationPermission) {
-                    permissionLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
-                }
+                if (!hasLocationPermission) onRequestPermission()
             }
             InstrumentPanelScreen(
                 flight = flight,

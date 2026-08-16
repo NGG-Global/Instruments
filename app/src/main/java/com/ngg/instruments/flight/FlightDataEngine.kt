@@ -11,6 +11,7 @@ import com.ngg.instruments.math.Quaternion
 import com.ngg.instruments.math.Units
 import com.ngg.instruments.sensor.FlightDataSources
 import com.ngg.instruments.sensor.GnssSample
+import com.ngg.instruments.sensor.GnssStatusSample
 import com.ngg.instruments.sensor.PressureSample
 import com.ngg.instruments.sensor.RotationKind
 import com.ngg.instruments.sensor.RotationSample
@@ -68,6 +69,7 @@ class FlightDataEngine(
     )
 
     private var lastFix: GnssFix? = null
+    private var lastStatus: GnssStatusSample? = null
     private var declinationDeg: Float? = null
     private var declinationFixTimeMs = 0L
 
@@ -82,6 +84,7 @@ class FlightDataEngine(
         gnssVsi.reset()
         speedEstimator.reset()
         lastFix = null
+        lastStatus = null
         sampleClockNanos = Long.MIN_VALUE
     }
 
@@ -103,6 +106,7 @@ class FlightDataEngine(
                     is RotationSample -> onRotation(sample)
                     is PressureSample -> onPressure(sample)
                     is GnssSample -> onGnss(sample)
+                    is GnssStatusSample -> lastStatus = sample
                 }
             }
         }
@@ -174,6 +178,7 @@ class FlightDataEngine(
 
         // --- GNSS-derived quantities ---
         val fix = lastFix
+        val status = lastStatus?.takeIf { now - it.elapsedNanos <= STATUS_STALE_NS }
         val gnssQuality = LocationQualityEvaluator.evaluate(fix, now)
         val track = if (LocationQualityEvaluator.isTrackUsable(fix, now)) fix?.bearingDeg else null
         val speedKt = speedEstimator.groundSpeedKt(now)
@@ -223,6 +228,8 @@ class FlightDataEngine(
             verticalAccuracyM = fix?.verticalAccuracyM,
             speedAccuracyMps = fix?.speedAccuracyMps,
             bearingAccuracyDeg = fix?.bearingAccuracyDeg,
+            satellitesUsed = status?.satellitesUsed,
+            satellitesVisible = status?.satellitesVisible,
             attitudeQuality = attitudeQuality,
             headingQuality = headingQuality,
             altitudeQuality = altitudeQuality,
@@ -239,5 +246,6 @@ class FlightDataEngine(
     private companion object {
         const val PUBLISH_PERIOD_MS = 33L // ~30 Hz state publication
         const val DECLINATION_REFRESH_MS = 10 * 60 * 1000L
+        const val STATUS_STALE_NS = 6_000_000_000L
     }
 }

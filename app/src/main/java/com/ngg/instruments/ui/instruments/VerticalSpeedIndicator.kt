@@ -17,6 +17,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
+import com.ngg.instruments.ui.theme.BarlowCondensed
 import com.ngg.instruments.ui.theme.Palette
 import kotlin.math.abs
 import kotlin.math.cos
@@ -115,8 +116,8 @@ private fun DrawScope.drawVsiDial(textMeasurer: TextMeasurer, dialR: Float) {
     }
 
     // Labels, using the same mapping as the ticks and needle.
-    val bigStyle = TextStyle(color = Palette.inkWhite, fontSize = (s * 0.052f).toSp(), fontWeight = FontWeight.Bold)
-    val smallStyle = TextStyle(color = Palette.inkWhite, fontSize = (s * 0.036f).toSp(), fontWeight = FontWeight.Bold)
+    val bigStyle = TextStyle(fontFamily = BarlowCondensed, color = Palette.inkWhite, fontSize = (s * 0.052f).toSp(), fontWeight = FontWeight.Bold)
+    val smallStyle = TextStyle(fontFamily = BarlowCondensed, color = Palette.inkWhite, fontSize = (s * 0.036f).toSp(), fontWeight = FontWeight.Bold)
 
     fun label(text: String, fpm: Float, style: TextStyle) {
         val angle = Math.toRadians(180.0 + vsiSweepDeg(fpm).toDouble())
@@ -145,17 +146,17 @@ private fun DrawScope.drawVsiDial(textMeasurer: TextMeasurer, dialR: Float) {
     // Center wording.
     val t1 = textMeasurer.measure(
         AnnotatedString("VERTICAL SPEED"),
-        TextStyle(color = Palette.inkWhite, fontSize = (s * 0.024f).toSp(), fontWeight = FontWeight.Bold),
+        TextStyle(fontFamily = BarlowCondensed, color = Palette.inkWhite, fontSize = (s * 0.024f).toSp(), fontWeight = FontWeight.Bold),
     )
     drawText(t1, topLeft = Offset(c.x - t1.size.width / 2f, c.y - dialR * 0.30f - t1.size.height / 2f))
     val t2 = textMeasurer.measure(
         AnnotatedString("THOUSANDS FT / MIN"),
-        TextStyle(color = Palette.inkWhite, fontSize = (s * 0.019f).toSp(), fontWeight = FontWeight.Bold),
+        TextStyle(fontFamily = BarlowCondensed, color = Palette.inkWhite, fontSize = (s * 0.019f).toSp(), fontWeight = FontWeight.Bold),
     )
     drawText(t2, topLeft = Offset(c.x - t2.size.width / 2f, c.y - dialR * 0.19f - t2.size.height / 2f))
 
     // UP / DOWN arrows near the zero point.
-    val arrowStyle = TextStyle(color = Palette.inkCream, fontSize = (s * 0.020f).toSp(), fontWeight = FontWeight.Bold)
+    val arrowStyle = TextStyle(fontFamily = BarlowCondensed, color = Palette.inkCream, fontSize = (s * 0.020f).toSp(), fontWeight = FontWeight.Bold)
     val up = textMeasurer.measure(AnnotatedString("UP"), arrowStyle)
     drawText(up, topLeft = Offset(c.x - dialR * 0.72f, c.y - dialR * 0.30f))
     val dn = textMeasurer.measure(AnnotatedString("DN"), arrowStyle)

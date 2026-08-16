@@ -18,15 +18,18 @@
     <application
         android:name=".InstrumentsApplication"
         android:label="@string/app_name"
+        android:icon="@mipmap/ic_launcher"
         android:theme="@style/Theme.Instruments"
         android:allowBackup="true"
         android:supportsRtl="true">
 
+        <!-- Rotation is handled deliberately: the activity is not recreated
+             (configChanges) and the panel reflows between the portrait and
+             landscape layouts from the design. -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:screenOrientation="portrait"
-            android:configChanges="orientation|screenSize|keyboardHidden">
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

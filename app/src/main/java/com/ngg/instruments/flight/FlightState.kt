@@ -32,6 +32,9 @@ data class FlightState(
     val speedAccuracyMps: Float? = null,
     val bearingAccuracyDeg: Float? = null,
 
+    val satellitesUsed: Int? = null,
+    val satellitesVisible: Int? = null,
+
     val attitudeQuality: DataQuality = DataQuality.UNAVAILABLE,
     val headingQuality: DataQuality = DataQuality.UNAVAILABLE,
     val altitudeQuality: DataQuality = DataQuality.UNAVAILABLE,

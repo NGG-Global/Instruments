@@ -20,6 +20,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
+import com.ngg.instruments.ui.theme.BarlowCondensed
 import com.ngg.instruments.ui.theme.Palette
 import kotlin.math.min
 import kotlin.math.sin
@@ -53,6 +54,7 @@ fun AttitudeIndicator(
             }
 
             val ladderStyle = TextStyle(
+                fontFamily = BarlowCondensed,
                 color = Palette.inkWhite,
                 fontSize = (s * 0.032f).toSp(),
                 fontWeight = FontWeight.Bold,
@@ -62,6 +64,7 @@ fun AttitudeIndicator(
             val flagLayout = textMeasurer.measure(
                 AnnotatedString("ATT"),
                 TextStyle(
+                fontFamily = BarlowCondensed,
                     color = Color(0xFF14161A),
                     fontSize = (s * 0.045f).toSp(),
                     fontWeight = FontWeight.Bold,

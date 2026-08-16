@@ -19,6 +19,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
+import com.ngg.instruments.ui.theme.BarlowCondensed
 import com.ngg.instruments.ui.theme.Palette
 import kotlin.math.cos
 import kotlin.math.min
@@ -53,11 +54,13 @@ fun Altimeter(
             }
 
             val readoutStyle = TextStyle(
+                fontFamily = BarlowCondensed,
                 color = Color.White,
                 fontSize = (s * 0.042f).toSp(),
                 fontWeight = FontWeight.Bold,
             )
             val qnhStyle = TextStyle(
+                fontFamily = BarlowCondensed,
                 color = Palette.inkCream,
                 fontSize = (s * 0.028f).toSp(),
                 fontWeight = FontWeight.Bold,
@@ -132,6 +135,7 @@ private fun DrawScope.drawAltimeterDial(textMeasurer: TextMeasurer, dialR: Float
     }
 
     val numeralStyle = TextStyle(
+                fontFamily = BarlowCondensed,
         color = Palette.inkWhite,
         fontSize = (s * 0.062f).toSp(),
     )
@@ -150,7 +154,7 @@ private fun DrawScope.drawAltimeterDial(textMeasurer: TextMeasurer, dialR: Float
 
     val feetLayout = textMeasurer.measure(
         AnnotatedString("FEET"),
-        TextStyle(color = Palette.inkWhite, fontSize = (s * 0.028f).toSp()),
+        TextStyle(fontFamily = BarlowCondensed, color = Palette.inkWhite, fontSize = (s * 0.028f).toSp()),
     )
     drawText(
         feetLayout,
@@ -158,6 +162,7 @@ private fun DrawScope.drawAltimeterDial(textMeasurer: TextMeasurer, dialR: Float
     )
 
     val annotationStyle = TextStyle(
+                fontFamily = BarlowCondensed,
         color = Palette.inkWhite,
         fontSize = (s * 0.014f).toSp(),
         fontWeight = FontWeight.Bold,
