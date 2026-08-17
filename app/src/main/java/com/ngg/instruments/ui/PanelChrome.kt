@@ -8,12 +8,17 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -145,6 +150,8 @@ fun PanelStatusBar(
     Row(
         modifier
             .fillMaxWidth()
+            // Keeps the status line clear of the system status bar and cutout.
+            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal))
             .height(26.dp)
             .padding(horizontal = 13.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -375,8 +382,11 @@ fun PanelControlBar(
     Row(
         modifier
             .fillMaxWidth()
-            .height(58.dp)
-            .background(Color(0xFF0A0C0E)),
+            // The bar's surface bleeds behind the navigation bar; the buttons
+            // sit above it so they are never under the gesture area.
+            .background(Color(0xFF0A0C0E))
+            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal))
+            .height(58.dp),
         horizontalArrangement = Arrangement.SpaceAround,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -395,8 +405,9 @@ fun PanelControlRail(
     Column(
         modifier
             .fillMaxHeight()
-            .width(64.dp)
-            .background(Color(0xFF0A0C0E)),
+            .background(Color(0xFF0A0C0E))
+            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.End + WindowInsetsSides.Vertical))
+            .width(64.dp),
         verticalArrangement = Arrangement.SpaceAround,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {

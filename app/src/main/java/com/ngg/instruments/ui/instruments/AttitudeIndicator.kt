@@ -16,15 +16,19 @@ import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
+import com.ngg.instruments.ui.rememberDeadbandInt
+import com.ngg.instruments.ui.rememberDisplayValue
 import com.ngg.instruments.ui.theme.BarlowCondensed
 import com.ngg.instruments.ui.theme.Palette
+import kotlin.math.cos
+import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sin
-import kotlin.math.cos
 
 /**
  * Attitude indicator. Conventional behaviour: the aircraft symbol is fixed;
@@ -41,6 +45,14 @@ fun AttitudeIndicator(
     modifier: Modifier = Modifier,
 ) {
     val textMeasurer = rememberTextMeasurer()
+
+    // Numeric pitch readout pipeline. The incoming pitchDeg is eased at
+    // tau = 60 ms for needle motion; a rounded integer needs a slower pass
+    // (tau = 300 ms) plus a 0.6° deadband so it does not flicker at rounding
+    // boundaries. Quantisation happens in the frame-callback layer, never in
+    // the draw phase.
+    val readoutPitch = rememberDisplayValue(tauMillis = 300f) { pitchDeg.value }
+    val readoutPitchInt = rememberDeadbandInt(readoutPitch, deadband = 0.6f)
 
     Spacer(
         modifier.drawWithCache {
@@ -78,6 +90,19 @@ fun AttitudeIndicator(
                 )
             }
 
+            // Pitch readout box, sized against the widest realistic string so
+            // the value never clips.
+            val pitchReadoutStyle = TextStyle(
+                fontFamily = BarlowCondensed,
+                color = Palette.inkWhite,
+                fontSize = (s * 0.060f).toSp(),
+                fontWeight = FontWeight.Bold,
+            )
+            val widestPitch = textMeasurer.measure(AnnotatedString("-90°"), pitchReadoutStyle)
+            val pitchBoxW = max(s * 0.130f, widestPitch.size.width + s * 0.020f)
+            val pitchBoxH = s * 0.050f
+            val pitchBoxTop = c.y + s * 0.352f
+
             onDrawBehind {
                 drawImage(background)
 
@@ -88,6 +113,17 @@ fun AttitudeIndicator(
                 drawHorizonBall(c, ballR, s, pitch, roll, clipCircle, ladder10, ladder20)
                 drawBankScale(c, ballR, s, roll)
                 drawAircraftSymbol(c, s)
+
+                // Numeric pitch readout: on the housing below the ball
+                // (outside ballR, unaffected by the glass), hidden entirely
+                // when attitude is unavailable — the ATT flag covers that.
+                if (isAvailable) {
+                    drawPitchReadout(
+                        c, s, pitchBoxW, pitchBoxH, pitchBoxTop,
+                        textMeasurer, pitchReadoutStyle, readoutPitchInt.value,
+                    )
+                }
+
                 drawGlassOverBall(c, ballR)
 
                 if (!isAvailable) {
@@ -380,6 +416,44 @@ private fun DrawScope.drawGlassOverBall(c: Offset, ballR: Float) {
         ),
         radius = ballR,
         center = c,
+    )
+}
+
+private fun DrawScope.drawPitchReadout(
+    c: Offset,
+    s: Float,
+    boxW: Float,
+    boxH: Float,
+    boxTop: Float,
+    textMeasurer: TextMeasurer,
+    style: TextStyle,
+    pitchInt: Int,
+) {
+    val topLeft = Offset(c.x - boxW / 2f, boxTop)
+    val boxSize = androidx.compose.ui.geometry.Size(boxW, boxH)
+    val corner = androidx.compose.ui.geometry.CornerRadius(s * 0.008f)
+
+    drawRoundRect(
+        color = Color(0xFF080A0B).copy(alpha = 0.92f),
+        topLeft = topLeft,
+        size = boxSize,
+        cornerRadius = corner,
+    )
+    drawRoundRect(
+        color = Color.White.copy(alpha = 0.10f),
+        topLeft = topLeft,
+        size = boxSize,
+        cornerRadius = corner,
+        style = Stroke(width = s * 0.0018f),
+    )
+
+    val layout = textMeasurer.measure(AnnotatedString("%+d°".format(pitchInt)), style)
+    drawText(
+        layout,
+        topLeft = Offset(
+            c.x - layout.size.width / 2f,
+            boxTop + boxH / 2f - layout.size.height / 2f,
+        ),
     )
 }
 

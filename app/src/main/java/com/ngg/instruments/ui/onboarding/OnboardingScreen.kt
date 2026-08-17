@@ -1,34 +1,34 @@
 package com.ngg.instruments.ui.onboarding
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.ngg.instruments.flight.DataQuality
 import com.ngg.instruments.sensor.SensorCapabilities
+import com.ngg.instruments.ui.common.SafetyFooter
+import com.ngg.instruments.ui.common.ScreenScaffold
+import com.ngg.instruments.ui.common.SectionCard
+import com.ngg.instruments.ui.common.StatusBadge
 import com.ngg.instruments.ui.theme.Palette
 
 /**
  * First-launch flow: mounting guidance, location permission, sensor summary,
- * SET LEVEL, QNH, safety statement. Not repeated on later launches;
- * recalibration lives in settings.
+ * SET LEVEL, QNH, safety statement. Chrome shared with settings/diagnostics.
+ * Not repeated on later launches; recalibration lives in settings.
  */
 @Composable
 fun OnboardingScreen(
@@ -40,48 +40,45 @@ fun OnboardingScreen(
     onEditQnh: () -> Unit,
     onDone: () -> Unit,
 ) {
-    Column(
-        Modifier
-            .fillMaxSize()
-            .background(Palette.panelBackground)
-            .verticalScroll(rememberScrollState())
-            .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
-    ) {
-        Spacer(Modifier.height(8.dp))
-        Text(
-            "FLIGHT INSTRUMENTS",
-            color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold, letterSpacing = 3.sp,
-        )
-        Text(
-            "For supplemental / experimental use only. Not a certified flight instrument and not a substitute for approved aircraft instrumentation.",
-            color = Color(0xFFE0A83C), fontSize = 13.sp,
-        )
+    ScreenScaffold(title = "Flight Instruments", onBack = null) {
 
-        Step("1", "MOUNT THE DEVICE") {
+        SafetyFooter()
+
+        SectionCard(title = "1 · MOUNT THE DEVICE") {
             Text(
                 "Fix the device rigidly in its normal operating position. Attitude readings assume the device does not move relative to the airframe.",
-                color = Color(0x99EEEFEB), fontSize = 13.sp,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
 
-        Step("2", "LOCATION PERMISSION") {
+        SectionCard(
+            title = "2 · LOCATION PERMISSION",
+            statusColor = Palette.qualityColor(if (hasLocationPermission) DataQuality.GOOD else DataQuality.DEGRADED),
+            statusLabel = if (hasLocationPermission) "GRANTED" else "NOT GRANTED",
+        ) {
             Text(
                 "Precise location is used only for GNSS ground speed, track and altitude — entirely on this device, offline. This app has no internet permission.",
-                color = Color(0x99EEEFEB), fontSize = 13.sp,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Spacer(Modifier.height(8.dp))
-            if (hasLocationPermission) {
-                Text("Granted", color = Color(0xFF4FBF6B), fontSize = 13.sp, fontWeight = FontWeight.Bold)
-            } else {
+            if (!hasLocationPermission) {
+                Spacer(Modifier.height(10.dp))
                 Button(
                     onClick = onRequestLocationPermission,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2B3033), contentColor = Color.White),
-                ) { Text("GRANT PRECISE LOCATION") }
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                        contentColor = MaterialTheme.colorScheme.onSurface,
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 48.dp)
+                        .semantics { contentDescription = "Grant precise location permission" },
+                ) { Text("GRANT PRECISE LOCATION", style = MaterialTheme.typography.labelLarge) }
             }
         }
 
-        Step("3", "DETECTED SENSORS") {
+        SectionCard(title = "3 · DETECTED SENSORS") {
             SensorLine("Attitude (rotation vector)", capabilities.hasAnyAttitudeSource)
             SensorLine("Compass heading", capabilities.hasAnyHeadingSource)
             SensorLine("Barometer", capabilities.hasPressure)
@@ -89,65 +86,73 @@ fun OnboardingScreen(
             if (!capabilities.hasPressure) {
                 Text(
                     "Pressure sensor unavailable — altitude and vertical speed will use GNSS with reduced responsiveness.",
-                    color = Color(0xFFE0A83C), fontSize = 12.sp,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Palette.qualityColor(DataQuality.DEGRADED),
                 )
             }
         }
 
-        Step("4", "SET LEVEL") {
+        SectionCard(
+            title = "4 · SET LEVEL",
+            statusColor = Palette.qualityColor(if (attitudeCalibrated) DataQuality.GOOD else DataQuality.DEGRADED),
+            statusLabel = if (attitudeCalibrated) "CALIBRATED" else "NOT CALIBRATED",
+        ) {
             Text(
                 "With the device mounted and the aircraft level, capture the attitude reference. You can recalibrate any time from settings.",
-                color = Color(0x99EEEFEB), fontSize = 13.sp,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(10.dp))
             Button(
                 onClick = onSetLevel,
-                colors = ButtonDefaults.buttonColors(containerColor = Palette.referenceOrange, contentColor = Color.Black),
-            ) { Text("SET LEVEL", fontWeight = FontWeight.Bold, letterSpacing = 2.sp) }
-            if (attitudeCalibrated) {
-                Text("Calibrated", color = Color(0xFF4FBF6B), fontSize = 13.sp, fontWeight = FontWeight.Bold)
-            }
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 48.dp)
+                    .semantics { contentDescription = "Capture level attitude reference" },
+            ) { Text("SET LEVEL", style = MaterialTheme.typography.labelLarge) }
         }
 
-        Step("5", "QNH") {
+        SectionCard(title = "5 · QNH") {
             Text(
                 "Enter the local altimeter setting for accurate indicated altitude. Defaults to standard pressure 1013.25 hPa.",
-                color = Color(0x99EEEFEB), fontSize = 13.sp,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Spacer(Modifier.height(8.dp))
-            OutlinedButton(onClick = onEditQnh) { Text("ENTER QNH", color = Palette.inkCream) }
+            Spacer(Modifier.height(10.dp))
+            OutlinedButton(
+                onClick = onEditQnh,
+                modifier = Modifier
+                    .heightIn(min = 48.dp)
+                    .semantics { contentDescription = "Enter QNH altimeter setting" },
+            ) { Text("ENTER QNH", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.secondary) }
         }
 
         Button(
             onClick = onDone,
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2B3033), contentColor = Color.White),
-        ) { Text("ENTER INSTRUMENT PANEL", letterSpacing = 1.5.sp) }
-        Spacer(Modifier.height(12.dp))
-    }
-}
-
-@Composable
-private fun Step(number: String, title: String, content: @Composable () -> Unit) {
-    Column {
-        Row {
-            Text(number, color = Palette.referenceOrange, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.width(8.dp))
-            Text(title, color = Palette.inkCream, fontSize = 13.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
-        }
-        Spacer(Modifier.height(6.dp))
-        content()
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                contentColor = MaterialTheme.colorScheme.onSurface,
+            ),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 10.dp)
+                .heightIn(min = 52.dp)
+                .semantics { contentDescription = "Finish setup and enter the instrument panel" },
+        ) { Text("ENTER INSTRUMENT PANEL", style = MaterialTheme.typography.labelLarge) }
     }
 }
 
 @Composable
 private fun SensorLine(name: String, present: Boolean) {
-    Row(Modifier.fillMaxWidth()) {
-        Text(name, color = Color(0xCCEEEFEB), fontSize = 13.sp, modifier = Modifier.weight(1f))
-        Text(
+    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+        Text(name, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+        StatusBadge(
+            Palette.qualityColor(if (present) DataQuality.GOOD else DataQuality.POOR),
             if (present) "OK" else "MISSING",
-            color = if (present) Color(0xFF4FBF6B) else Color(0xFFD65045),
-            fontSize = 12.sp, fontWeight = FontWeight.Bold,
         )
     }
 }

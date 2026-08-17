@@ -8,12 +8,18 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -26,6 +32,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -134,8 +142,8 @@ fun InstrumentPanelScreen(
     }
 
     @Composable
-    fun dialGrid(modifier: Modifier) = Column(modifier, verticalArrangement = Arrangement.spacedBy(5.dp)) {
-        Row(Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+    fun dialGrid(modifier: Modifier) = Column(modifier, verticalArrangement = Arrangement.spacedBy(1.dp)) {
+        Row(Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(1.dp)) {
             InstrumentSlot("HEADING", headingQuality, modifier = Modifier.weight(1f).fillMaxHeight()) {
                 HeadingIndicator(heading, headingAvailable, track, useTrueHeading, Modifier.fillMaxSize())
             }
@@ -147,7 +155,7 @@ fun InstrumentPanelScreen(
                 Altimeter(altitude, altitudeAvailable, qnh, Modifier.fillMaxSize())
             }
         }
-        Row(Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+        Row(Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(1.dp)) {
             InstrumentSlot("VERTICAL SPEED", vsiQuality, chipText = vsiChip, modifier = Modifier.weight(1f).fillMaxHeight()) {
                 VerticalSpeedIndicator(vsi, vsiAvailable, Modifier.fillMaxSize())
             }
@@ -166,13 +174,16 @@ fun InstrumentPanelScreen(
                     PanelStatusBar(flight, locked)
                     StatusChipsRow(recording, replaying)
                     Column(
-                        Modifier.weight(1f).padding(horizontal = 6.dp),
-                        verticalArrangement = Arrangement.spacedBy(5.dp),
+                        Modifier
+                            .weight(1f)
+                            .windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.Horizontal))
+                            .padding(horizontal = 3.dp),
+                        verticalArrangement = Arrangement.spacedBy(1.dp),
                     ) {
                         Row(Modifier.fillMaxWidth().weight(0.4f)) {
                             attitudeSlot(Modifier.weight(1f).fillMaxHeight())
                         }
-                        dialGrid(Modifier.fillMaxWidth().weight(0.6f).padding(bottom = 5.dp))
+                        dialGrid(Modifier.fillMaxWidth().weight(0.6f).padding(bottom = 2.dp))
                     }
                     PanelControlBar(chrome, onOpenDiagnostics, onOpenSettings)
                 }
@@ -182,8 +193,13 @@ fun InstrumentPanelScreen(
                         PanelStatusBar(flight, locked)
                         StatusChipsRow(recording, replaying)
                         Row(
-                            Modifier.weight(1f).padding(start = 6.dp, end = 6.dp, bottom = 6.dp),
-                            horizontalArrangement = Arrangement.spacedBy(5.dp),
+                            Modifier
+                                .weight(1f)
+                                .windowInsetsPadding(
+                                    WindowInsets.safeDrawing.only(WindowInsetsSides.Start + WindowInsetsSides.Bottom),
+                                )
+                                .padding(start = 3.dp, end = 3.dp, bottom = 2.dp),
+                            horizontalArrangement = Arrangement.spacedBy(1.dp),
                         ) {
                             attitudeSlot(Modifier.fillMaxHeight().aspectRatio(1f, matchHeightConstraintsFirst = true))
                             dialGrid(Modifier.weight(1f).fillMaxHeight())
@@ -226,26 +242,17 @@ private fun InstrumentSlot(
     onClick: (() -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
+    // The visual caption was removed with the reference's mobile design; the
+    // label is kept for accessibility services and UI tests via semantics.
     var m = modifier
-        .clip(RoundedCornerShape(8.dp))
+        .clip(RoundedCornerShape(1.dp))
         .background(Palette.slotBackground)
-        .border(1.dp, Palette.slotBorder, RoundedCornerShape(8.dp))
+        .border(1.dp, Palette.slotBorder, RoundedCornerShape(1.dp))
+        .semantics { contentDescription = caption }
     if (onClick != null) m = m.clickable(onClick = onClick)
 
     Box(m) {
         content()
-        Text(
-            caption,
-            color = Palette.caption,
-            fontSize = 8.sp,
-            fontFamily = BarlowCondensed,
-            letterSpacing = 1.6.sp,
-            modifier = Modifier
-                .align(Alignment.BottomStart)
-                .padding(start = 7.dp, bottom = 5.dp)
-                .background(Color(0xC7050709), RoundedCornerShape(3.dp))
-                .padding(horizontal = 6.dp, vertical = 2.dp),
-        )
         val chip = chipText?.value
         if (chip != null) {
             Text(
