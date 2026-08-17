@@ -96,7 +96,9 @@ private const val RESOLVE_MS = 850
 private const val SHIMMER_MS = 950
 private const val EXIT_MS = 520
 
-private val Overshoot = CubicBezierEasing(0.34f, 1.56f, 0.64f, 1f)
+// Gentler overshoot than the original 1.56 — the unfold should feel rounded,
+// not snappy, to match the soft feather shapes of the logo.
+private val Overshoot = CubicBezierEasing(0.34f, 1.24f, 0.64f, 1f)
 private val Glide = CubicBezierEasing(0.37f, 0f, 0.63f, 1f)   // easeInOutSine-ish
 
 /* ---------------------------------------------------------------- geometry */
@@ -111,19 +113,28 @@ private data class Feather(
 )
 
 private val Feathers = listOf(
-    Feather(340f, 46f, 132f, -44f, -5f),
-    Feather(296f, 42f, 74f, 2f, -2f),
-    Feather(250f, 36f, 32f, 46f, 0f),
-    Feather(192f, 30f, 8f, 86f, 3f),
+    Feather(340f, 58f, 132f, -44f, -5f),
+    Feather(296f, 52f, 74f, 2f, -2f),
+    Feather(250f, 46f, 32f, 46f, 0f),
+    Feather(192f, 38f, 8f, 86f, 3f),
 )
 
+/**
+ * Fuller, rounded feather like the logo artwork: the outer end is a soft
+ * rounded cap (a small cubic loop around the tip) instead of the original
+ * sharp point.
+ */
 private fun bladePath(f: Feather): Path = Path().apply {
     val l = f.length
     val h = f.thickness
     val r = f.rise
     moveTo(0f, -h / 2f)
-    cubicTo(l * 0.40f, -h * 0.5f - r * 0.40f, l * 0.76f, -r * 0.86f, l, -r)
-    cubicTo(l * 0.70f, -r * 0.30f, l * 0.38f, h * 0.34f, 0f, h / 2f)
+    // Top edge sweeping out toward the tip.
+    cubicTo(l * 0.36f, -h * 0.55f - r * 0.36f, l * 0.70f, -r * 0.80f, l * 0.93f, -r * 0.94f)
+    // Rounded tip cap: loop past the tip and back instead of a sharp corner.
+    cubicTo(l * 1.07f, -r * 1.02f - h * 0.10f, l * 1.06f, -r * 0.66f + h * 0.16f, l * 0.90f, -r * 0.62f)
+    // Bottom edge back to the root.
+    cubicTo(l * 0.62f, -r * 0.24f, l * 0.34f, h * 0.34f, 0f, h / 2f)
     close()
 }
 

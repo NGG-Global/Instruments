@@ -105,8 +105,12 @@ fun Altimeter(
                     topLeft = Offset(c.x - qnhLayout.size.width / 2f, c.y + dialR * 0.62f - qnhLayout.size.height / 2f),
                 )
 
+                // Without data the needles park at zero, dimmed — like an
+                // unpowered instrument — instead of disappearing entirely.
                 if (isAvailable) {
-                    drawAltimeterNeedles(c, dialR, s, feet)
+                    drawAltimeterNeedles(c, dialR, s, feet, alpha = 1f)
+                } else {
+                    drawAltimeterNeedles(c, dialR, s, feet = 0f, alpha = PARKED_NEEDLE_ALPHA)
                 }
                 drawHub(radiusFraction = 0.033f)
                 drawGlass(dialR)
@@ -173,7 +177,9 @@ private fun DrawScope.drawAltimeterDial(textMeasurer: TextMeasurer, dialR: Float
     drawText(cal2, topLeft = Offset(c.x - dialR * 0.36f, c.y - dialR * 0.14f))
 }
 
-private fun DrawScope.drawAltimeterNeedles(c: Offset, dialR: Float, s: Float, feet: Float) {
+internal const val PARKED_NEEDLE_ALPHA = 0.35f
+
+private fun DrawScope.drawAltimeterNeedles(c: Offset, dialR: Float, s: Float, feet: Float, alpha: Float) {
     fun wrapFraction(value: Float, period: Float): Float {
         var f = (value % period) / period
         if (f < 0f) f += 1f
@@ -193,7 +199,7 @@ private fun DrawScope.drawAltimeterNeedles(c: Offset, dialR: Float, s: Float, fe
             lineTo(c.x + s * 0.0044f, c.y + dialR * 0.26f)
             close()
         }
-        drawPath(tail, Palette.needleDark)
+        drawPath(tail, Palette.needleDark, alpha = alpha)
         val pointer = Path().apply {
             moveTo(c.x - s * 0.014f, c.y + s * 0.020f)
             lineTo(c.x - s * 0.010f, c.y - dialR * 0.44f)
@@ -202,7 +208,7 @@ private fun DrawScope.drawAltimeterNeedles(c: Offset, dialR: Float, s: Float, fe
             lineTo(c.x + s * 0.014f, c.y + s * 0.020f)
             close()
         }
-        drawPath(pointer, Color(0xFFF1F1ED))
+        drawPath(pointer, Color(0xFFF1F1ED), alpha = alpha)
     }
 
     // LONG needle: hundreds of feet.
@@ -214,7 +220,7 @@ private fun DrawScope.drawAltimeterNeedles(c: Offset, dialR: Float, s: Float, fe
             lineTo(c.x + s * 0.0028f, c.y + dialR * 0.34f)
             close()
         }
-        drawPath(tail, Palette.needleDark)
+        drawPath(tail, Palette.needleDark, alpha = alpha)
         val pointer = Path().apply {
             moveTo(c.x - s * 0.007f, c.y + s * 0.028f)
             lineTo(c.x - s * 0.005f, c.y - dialR * 0.74f)
@@ -223,13 +229,13 @@ private fun DrawScope.drawAltimeterNeedles(c: Offset, dialR: Float, s: Float, fe
             lineTo(c.x + s * 0.007f, c.y + s * 0.028f)
             close()
         }
-        drawPath(pointer, Color(0xFFF1F1ED))
+        drawPath(pointer, Color(0xFFF1F1ED), alpha = alpha)
     }
 
     // THIN needle with inward triangle: tens of thousands of feet.
     rotate(degrees = tenThousandsAngle, pivot = c) {
         drawLine(
-            color = Color.White,
+            color = Color.White.copy(alpha = alpha),
             start = Offset(c.x, c.y - s * 0.004f),
             end = Offset(c.x, c.y - dialR * 0.72f),
             strokeWidth = s * 0.006f,
@@ -240,6 +246,6 @@ private fun DrawScope.drawAltimeterNeedles(c: Offset, dialR: Float, s: Float, fe
             lineTo(c.x + s * 0.027f, c.y - dialR * 0.86f)
             close()
         }
-        drawPath(tri, Color(0xFFF1F1ED))
+        drawPath(tri, Color(0xFFF1F1ED), alpha = alpha)
     }
 }

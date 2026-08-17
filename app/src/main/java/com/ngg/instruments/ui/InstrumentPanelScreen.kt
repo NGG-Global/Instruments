@@ -44,6 +44,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ngg.instruments.calibration.HeadingSource
 import com.ngg.instruments.flight.DataQuality
 import com.ngg.instruments.flight.FlightState
 import com.ngg.instruments.ui.instruments.Altimeter
@@ -71,7 +72,7 @@ import kotlin.math.roundToInt
 @Composable
 fun InstrumentPanelScreen(
     flight: State<FlightState>,
-    useTrueHeading: State<Boolean>,
+    headingSource: State<HeadingSource>,
     recording: Boolean,
     replaying: Boolean,
     onOpenSettings: () -> Unit,
@@ -84,9 +85,15 @@ fun InstrumentPanelScreen(
     // NaN targets freeze the display (used when data is unavailable).
     val pitch = rememberDisplayValue(tauMillis = 60f) { flight.value.pitchDeg ?: Float.NaN }
     val roll = rememberDisplayValue(tauMillis = 60f) { flight.value.rollDeg ?: Float.NaN }
+    // The card follows the selected source: GPS track (designed default) or
+    // compass magnetic/true heading. NaN holds the card when no valid value.
     val heading = rememberDisplayValue(tauMillis = 150f, angular = true) {
         val f = flight.value
-        val h = if (useTrueHeading.value) f.trueHeadingDeg ?: f.magneticHeadingDeg else f.magneticHeadingDeg
+        val h = when (headingSource.value) {
+            HeadingSource.GPS_TRACK -> f.trackDeg
+            HeadingSource.MAGNETIC -> f.magneticHeadingDeg
+            HeadingSource.TRUE -> f.trueHeadingDeg ?: f.magneticHeadingDeg
+        }
         h ?: Float.NaN
     }
     val altitude = rememberDisplayValue(tauMillis = 280f) { flight.value.altitudeFt ?: Float.NaN }
@@ -95,16 +102,54 @@ fun InstrumentPanelScreen(
 
     val attitudeAvailable = remember { derivedStateOf { flight.value.pitchDeg != null } }
     val headingAvailable = remember {
-        derivedStateOf { flight.value.magneticHeadingDeg != null || flight.value.trueHeadingDeg != null }
+        derivedStateOf {
+            when (headingSource.value) {
+                HeadingSource.GPS_TRACK -> flight.value.trackDeg != null
+                HeadingSource.MAGNETIC -> flight.value.magneticHeadingDeg != null
+                HeadingSource.TRUE ->
+                    flight.value.trueHeadingDeg != null || flight.value.magneticHeadingDeg != null
+            }
+        }
+    }
+
+    fun fmt(deg: Float?): String = deg?.let { "%03d°".format(it.roundToInt().mod(360)) } ?: "---"
+
+    // Honest labels: TRK for GNSS course over ground, HDG for compass heading.
+    val headingPrimary = remember {
+        derivedStateOf {
+            val f = flight.value
+            when (headingSource.value) {
+                HeadingSource.GPS_TRACK -> "TRK ${fmt(f.trackDeg)}"
+                HeadingSource.MAGNETIC -> "HDG ${fmt(f.magneticHeadingDeg)}${if (f.magneticHeadingDeg != null) "M" else ""}"
+                HeadingSource.TRUE -> "HDG ${fmt(f.trueHeadingDeg)}${if (f.trueHeadingDeg != null) "T" else ""}"
+            }
+        }
+    }
+    val headingSecondary = remember {
+        derivedStateOf {
+            val f = flight.value
+            when (headingSource.value) {
+                HeadingSource.GPS_TRACK -> "HDG ${fmt(f.magneticHeadingDeg)}${if (f.magneticHeadingDeg != null) "M" else ""}"
+                else -> "TRK ${fmt(f.trackDeg)}"
+            }
+        }
     }
     val altitudeAvailable = remember { derivedStateOf { flight.value.altitudeFt != null } }
     val vsiAvailable = remember { derivedStateOf { flight.value.verticalSpeedFpm != null } }
     val speedAvailable = remember { derivedStateOf { flight.value.groundSpeedKt != null } }
-    val track = remember { derivedStateOf { flight.value.trackDeg } }
     val qnh = remember { derivedStateOf { flight.value.qnhHpa } }
 
     val attitudeQuality by remember { derivedStateOf { flight.value.attitudeQuality } }
-    val headingQuality by remember { derivedStateOf { flight.value.headingQuality } }
+    // The quality dot reflects the selected source: GNSS quality for track,
+    // compass quality for magnetic/true heading.
+    val headingQuality by remember {
+        derivedStateOf {
+            when (headingSource.value) {
+                HeadingSource.GPS_TRACK -> flight.value.gnssQuality
+                else -> flight.value.headingQuality
+            }
+        }
+    }
     val altitudeQuality by remember { derivedStateOf { flight.value.altitudeQuality } }
     val vsiQuality by remember { derivedStateOf { flight.value.verticalSpeedQuality } }
     val speedQuality by remember { derivedStateOf { flight.value.speedQuality } }
@@ -166,7 +211,7 @@ fun InstrumentPanelScreen(
                 onClick = { focus(FocusedInstrument.HEADING) },
                 modifier = Modifier.weight(1f).fillMaxHeight(),
             ) {
-                HeadingIndicator(heading, headingAvailable, track, useTrueHeading, Modifier.fillMaxSize())
+                HeadingIndicator(heading, headingAvailable, headingPrimary, headingSecondary, Modifier.fillMaxSize())
             }
             InstrumentSlot(
                 "ALTIMETER", altitudeQuality,
@@ -250,7 +295,7 @@ fun InstrumentPanelScreen(
                         FocusedInstrument.ATTITUDE ->
                             AttitudeIndicator(pitch, roll, attitudeAvailable, instrumentModifier)
                         FocusedInstrument.HEADING ->
-                            HeadingIndicator(heading, headingAvailable, track, useTrueHeading, instrumentModifier)
+                            HeadingIndicator(heading, headingAvailable, headingPrimary, headingSecondary, instrumentModifier)
                         FocusedInstrument.ALTIMETER ->
                             Altimeter(altitude, altitudeAvailable, qnh, instrumentModifier)
                         FocusedInstrument.VERTICAL_SPEED ->

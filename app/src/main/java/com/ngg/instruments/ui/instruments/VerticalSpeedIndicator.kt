@@ -56,7 +56,10 @@ fun VerticalSpeedIndicator(
 
                 if (available.value) {
                     val fpm = verticalSpeedFpm.value.coerceIn(-6_000f, 6_000f)
-                    drawVsiNeedle(c, dialR, s, fpm)
+                    drawVsiNeedle(c, dialR, s, fpm, alpha = 1f)
+                } else {
+                    // Parked at zero, dimmed, like an unpowered instrument.
+                    drawVsiNeedle(c, dialR, s, fpm = 0f, alpha = PARKED_NEEDLE_ALPHA)
                 }
                 drawHub()
                 drawGlass(dialR)
@@ -172,7 +175,7 @@ private fun DrawScope.drawVsiDial(textMeasurer: TextMeasurer, dialR: Float) {
     drawPath(bug, Palette.inkWhite)
 }
 
-private fun DrawScope.drawVsiNeedle(c: Offset, dialR: Float, s: Float, fpm: Float) {
+private fun DrawScope.drawVsiNeedle(c: Offset, dialR: Float, s: Float, fpm: Float, alpha: Float) {
     val angleDeg = 180f + vsiSweepDeg(fpm)
     rotate(degrees = angleDeg, pivot = c) {
         // Needle drawn pointing along +X, rotation handles direction.
@@ -184,7 +187,7 @@ private fun DrawScope.drawVsiNeedle(c: Offset, dialR: Float, s: Float, fpm: Floa
             lineTo(c.x - s * 0.035f, c.y + s * 0.012f)
             close()
         }
-        drawPath(needle, Color(0xFFF0F0EC))
-        drawPath(needle, Color(0x8C141414), style = Stroke(width = s * 0.002f))
+        drawPath(needle, Color(0xFFF0F0EC), alpha = alpha)
+        drawPath(needle, Color(0x8C141414), alpha = alpha, style = Stroke(width = s * 0.002f))
     }
 }

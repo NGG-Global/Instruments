@@ -53,7 +53,10 @@ fun GroundSpeedIndicator(
                 drawImage(background)
 
                 if (available.value) {
-                    drawSpeedNeedle(c, dialR, s, groundSpeedKt.value.coerceIn(0f, 900f))
+                    drawSpeedNeedle(c, dialR, s, groundSpeedKt.value.coerceIn(0f, 900f), alpha = 1f)
+                } else {
+                    // Parked at zero, dimmed, like an unpowered instrument.
+                    drawSpeedNeedle(c, dialR, s, knots = 0f, alpha = PARKED_NEEDLE_ALPHA)
                 }
                 drawSpeedHub(c, s)
                 drawGlass(dialR)
@@ -126,7 +129,7 @@ private fun DrawScope.drawSpeedDial(textMeasurer: TextMeasurer, dialR: Float) {
     faceDot(dialR * 0.52f, dialR * 0.46f, s * 0.008f)
 }
 
-private fun DrawScope.drawSpeedNeedle(c: Offset, dialR: Float, s: Float, knots: Float) {
+private fun DrawScope.drawSpeedNeedle(c: Offset, dialR: Float, s: Float, knots: Float, alpha: Float) {
     rotate(degrees = speedAngleDeg(knots), pivot = c) {
         // Black rear counterbalance.
         val tail = Path().apply {
@@ -136,7 +139,7 @@ private fun DrawScope.drawSpeedNeedle(c: Offset, dialR: Float, s: Float, knots: 
             lineTo(c.x - dialR * 0.35f, c.y + s * 0.008f)
             close()
         }
-        drawPath(tail, Color(0xFF090B0C))
+        drawPath(tail, Color(0xFF090B0C), alpha = alpha)
 
         // Cream front needle.
         val needle = Path().apply {
@@ -147,7 +150,7 @@ private fun DrawScope.drawSpeedNeedle(c: Offset, dialR: Float, s: Float, knots: 
             lineTo(c.x - s * 0.018f, c.y + s * 0.010f)
             close()
         }
-        drawPath(needle, Palette.needleCream)
+        drawPath(needle, Palette.needleCream, alpha = alpha)
     }
 }
 

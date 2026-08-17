@@ -13,10 +13,22 @@ import kotlinx.coroutines.flow.map
 
 private val Context.dataStore by preferencesDataStore(name = "instruments_settings")
 
+/**
+ * What the direction indicator's rotating card follows.
+ * GPS_TRACK is the designed default: course over ground from GNSS, labeled
+ * TRK. Compass-based magnetic/true heading remain available and are always
+ * labeled HDG — track and heading are never conflated.
+ */
+enum class HeadingSource(val label: String) {
+    GPS_TRACK("GPS track"),
+    MAGNETIC("Magnetic heading"),
+    TRUE("True heading"),
+}
+
 /** All persisted user preferences and calibrations. Local storage only. */
 data class AppSettings(
     val qnhHpa: Float,
-    val useTrueHeading: Boolean,
+    val headingSource: HeadingSource,
     val mountOrientation: MountOrientation,
     val attitudeCalibration: AttitudeCalibration?,
     val onboardingComplete: Boolean,
@@ -36,7 +48,8 @@ class CalibrationRepository(private val context: Context) {
 
     private object Keys {
         val QNH = floatPreferencesKey("qnh_hpa")
-        val TRUE_HEADING = booleanPreferencesKey("use_true_heading")
+        val HEADING_SOURCE = stringPreferencesKey("heading_source")
+        val TRUE_HEADING = booleanPreferencesKey("use_true_heading") // legacy migration only
         val MOUNT = stringPreferencesKey("mount_orientation")
         val CAL_W = floatPreferencesKey("cal_w")
         val CAL_X = floatPreferencesKey("cal_x")
@@ -61,9 +74,19 @@ class CalibrationRepository(private val context: Context) {
             } else null
         } else null
 
+        // Heading source: new string key, migrating from the legacy true/mag
+        // switch when present; the designed default is GPS track.
+        val headingSource = prefs[Keys.HEADING_SOURCE]?.let { stored ->
+            HeadingSource.entries.firstOrNull { it.name == stored }
+        } ?: when (prefs[Keys.TRUE_HEADING]) {
+            true -> HeadingSource.TRUE
+            false -> HeadingSource.MAGNETIC
+            null -> HeadingSource.GPS_TRACK
+        }
+
         AppSettings(
             qnhHpa = prefs[Keys.QNH] ?: AltimeterCalibration.DEFAULT_QNH_HPA,
-            useTrueHeading = prefs[Keys.TRUE_HEADING] ?: false,
+            headingSource = headingSource,
             mountOrientation = mount,
             attitudeCalibration = calibration,
             onboardingComplete = prefs[Keys.ONBOARDED] ?: false,
@@ -75,8 +98,8 @@ class CalibrationRepository(private val context: Context) {
         context.dataStore.edit { it[Keys.QNH] = qnhHpa }
     }
 
-    suspend fun setUseTrueHeading(value: Boolean) {
-        context.dataStore.edit { it[Keys.TRUE_HEADING] = value }
+    suspend fun setHeadingSource(source: HeadingSource) {
+        context.dataStore.edit { it[Keys.HEADING_SOURCE] = source.name }
     }
 
     suspend fun setMountOrientation(mount: MountOrientation) {

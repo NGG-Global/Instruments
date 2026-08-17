@@ -103,7 +103,7 @@ private fun MainContent(
     var showQnhDialog by remember { mutableStateOf(false) }
 
     val flight = container.engine.state.collectAsStateWithLifecycle()
-    val useTrueHeading = remember(settings.useTrueHeading) { mutableStateOf(settings.useTrueHeading) }
+    val headingSource = remember(settings.headingSource) { mutableStateOf(settings.headingSource) }
 
     fun setLevel() {
         val reference = container.engine.latestDeviceOrientation ?: return
@@ -131,7 +131,7 @@ private fun MainContent(
             }
             InstrumentPanelScreen(
                 flight = flight,
-                useTrueHeading = useTrueHeading,
+                headingSource = headingSource,
                 recording = mode.recording,
                 replaying = mode.isReplay,
                 onOpenSettings = { screen = Screen.SETTINGS },
@@ -151,7 +151,9 @@ private fun MainContent(
                 onMountSelected = { mount: MountOrientation ->
                     scope.launch { container.calibrationRepository.setMountOrientation(mount) }
                 },
-                onUseTrueHeading = { scope.launch { container.calibrationRepository.setUseTrueHeading(it) } },
+                onHeadingSourceSelected = { source ->
+                    scope.launch { container.calibrationRepository.setHeadingSource(source) }
+                },
                 onEditQnh = { showQnhDialog = true },
                 onBack = { screen = Screen.PANEL },
             )

@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -18,7 +17,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -37,6 +35,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.ngg.instruments.calibration.AppSettings
+import com.ngg.instruments.calibration.HeadingSource
 import com.ngg.instruments.calibration.MountOrientation
 import com.ngg.instruments.flight.DataQuality
 import com.ngg.instruments.ui.common.SafetyFooter
@@ -57,7 +56,7 @@ fun SettingsScreen(
     onSetLevel: () -> Unit,
     onClearCalibration: () -> Unit,
     onMountSelected: (MountOrientation) -> Unit,
-    onUseTrueHeading: (Boolean) -> Unit,
+    onHeadingSourceSelected: (HeadingSource) -> Unit,
     onEditQnh: () -> Unit,
     onBack: () -> Unit,
 ) {
@@ -140,25 +139,40 @@ fun SettingsScreen(
 
             HorizontalDivider(Modifier.padding(vertical = 12.dp), color = MaterialTheme.colorScheme.outlineVariant)
 
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 48.dp)
-                    .toggleable(
-                        value = settings.useTrueHeading,
-                        onValueChange = onUseTrueHeading,
-                        role = Role.Switch,
-                    ),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        if (settings.useTrueHeading) "TRUE heading" else "MAGNETIC heading",
-                        style = MaterialTheme.typography.titleSmall,
-                    )
-                    HintLine("True heading needs one GNSS fix for the declination model.")
+            Text("Direction indicator source", style = MaterialTheme.typography.titleSmall)
+            HintLine("What the rotating card follows. GPS track is course over ground (labeled TRK).")
+            Spacer(Modifier.size(4.dp))
+            HeadingSource.entries.forEach { source ->
+                val selected = settings.headingSource == source
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 48.dp)
+                        .selectable(
+                            selected = selected,
+                            onClick = { onHeadingSourceSelected(source) },
+                            role = Role.RadioButton,
+                        ),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    RadioButton(selected = selected, onClick = null)
+                    Column {
+                        Text(
+                            source.label,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Text(
+                            when (source) {
+                                HeadingSource.GPS_TRACK -> "GNSS course over ground; needs movement and a fix"
+                                HeadingSource.MAGNETIC -> "Compass heading of the aircraft nose"
+                                HeadingSource.TRUE -> "Compass heading plus local declination (needs one GNSS fix)"
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
-                Switch(checked = settings.useTrueHeading, onCheckedChange = null)
             }
         }
 
