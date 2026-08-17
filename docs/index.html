@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EVionics — Offline Flight Instruments for Android</title>
+  <meta name="description" content="EVionics turns an Android phone or tablet into a supplemental flight instrument panel: attitude, heading, altimeter, vertical speed and ground speed from on-device sensors and GNSS. Fully offline, no internet permission.">
+  <link rel="icon" type="image/png" href="./assets/evionics-icon.png">
+  <link rel="stylesheet" href="./assets/styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="./">
+        <img src="./assets/evionics-icon.png" alt="" aria-hidden="true">
+        <span class="brand-name">EVIONICS</span>
+      </a>
+      <nav class="header-nav" aria-label="Site">
+        <a href="#instruments">Instruments</a>
+        <a href="#capabilities">Capabilities</a>
+        <a href="#offline">Offline</a>
+        <a href="./privacy/">Privacy</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+
+    <!-- ============================== HERO ============================== -->
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="wrap">
+        <img class="mark" src="./assets/evionics-icon.png"
+             alt="EVionics winged attitude-indicator emblem">
+        <h1 id="hero-title">EVIONICS</h1>
+        <p class="descriptor">Offline Flight Instruments for Android</p>
+        <p class="lede">
+          Turn your Android phone or tablet into a sensor-powered supplemental
+          flight instrument panel. EVionics uses your device's onboard sensors
+          and GNSS to provide real-time attitude, heading, altitude, vertical
+          speed and ground speed.
+        </p>
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="./privacy/">Privacy Policy</a>
+        </div>
+        <p class="safety-banner" role="note">
+          For supplemental and experimental use only. EVionics is not a
+          certified flight instrument and is not a substitute for approved
+          aircraft instrumentation or navigation equipment.
+        </p>
+      </div>
+    </section>
+
+    <!-- =========================== INSTRUMENTS ========================== -->
+    <section id="instruments" aria-labelledby="instruments-title">
+      <div class="wrap">
+        <p class="section-label">PANEL</p>
+        <h2 id="instruments-title">Five primary instruments</h2>
+        <p class="section-intro">
+          A native panel drawn entirely on-device, in the visual language of
+          classic aircraft instruments — dark faces, engraved scales and
+          analog needles.
+        </p>
+
+        <div class="instrument-grid">
+          <article class="instrument">
+            <svg class="glyph" viewBox="0 0 44 44" aria-hidden="true">
+              <circle cx="22" cy="22" r="19" fill="none" stroke="#2a3138" stroke-width="2"/>
+              <path d="M4.5 22 a17.5 17.5 0 0 1 35 0 Z" fill="#5896d4" opacity="0.85"/>
+              <path d="M4.5 22 a17.5 17.5 0 0 0 35 0 Z" fill="#56361c"/>
+              <line x1="10" y1="22" x2="18" y2="22" stroke="#f39a1e" stroke-width="2.4" stroke-linecap="round"/>
+              <line x1="26" y1="22" x2="34" y2="22" stroke="#f39a1e" stroke-width="2.4" stroke-linecap="round"/>
+            </svg>
+            <span class="abbr">ATT</span>
+            <h3>Attitude</h3>
+            <p>Pitch and roll derived from the best attitude sensors available
+               on the device, with SET LEVEL calibration.</p>
+          </article>
+
+          <article class="instrument">
+            <svg class="glyph" viewBox="0 0 44 44" aria-hidden="true">
+              <circle cx="22" cy="22" r="19" fill="none" stroke="#2a3138" stroke-width="2"/>
+              <g stroke="#9aa6ac" stroke-width="1.6">
+                <line x1="22" y1="4" x2="22" y2="10"/>
+                <line x1="22" y1="34" x2="22" y2="40"/>
+                <line x1="4" y1="22" x2="10" y2="22"/>
+                <line x1="34" y1="22" x2="40" y2="22"/>
+              </g>
+              <path d="M22 10 L26 26 L22 22.5 L18 26 Z" fill="#f39a1e"/>
+            </svg>
+            <span class="abbr">HDG</span>
+            <h3>Heading</h3>
+            <p>Magnetic or true heading, with GNSS track treated separately —
+               never relabeled as heading.</p>
+          </article>
+
+          <article class="instrument">
+            <svg class="glyph" viewBox="0 0 44 44" aria-hidden="true">
+              <circle cx="22" cy="22" r="19" fill="none" stroke="#2a3138" stroke-width="2"/>
+              <line x1="22" y1="22" x2="22" y2="7" stroke="#e8edf0" stroke-width="2.4" stroke-linecap="round"/>
+              <line x1="22" y1="22" x2="32" y2="28" stroke="#e8edf0" stroke-width="1.8" stroke-linecap="round"/>
+              <circle cx="22" cy="22" r="2.6" fill="#9aa6ac"/>
+            </svg>
+            <span class="abbr">ALT</span>
+            <h3>Altimeter</h3>
+            <p>Barometric altitude with adjustable QNH where a pressure sensor
+               is available, with GNSS fallback where supported.</p>
+          </article>
+
+          <article class="instrument">
+            <svg class="glyph" viewBox="0 0 44 44" aria-hidden="true">
+              <circle cx="22" cy="22" r="19" fill="none" stroke="#2a3138" stroke-width="2"/>
+              <line x1="22" y1="22" x2="9" y2="12" stroke="#e8edf0" stroke-width="2.4" stroke-linecap="round"/>
+              <circle cx="22" cy="22" r="2.6" fill="#9aa6ac"/>
+              <path d="M6 22 L10 19.5 L10 24.5 Z" fill="#d7d69a"/>
+            </svg>
+            <span class="abbr">VSI</span>
+            <h3>Vertical Speed</h3>
+            <p>Filtered climb and descent indication using barometric data
+               where available, with a degraded GNSS fallback.</p>
+          </article>
+
+          <article class="instrument">
+            <svg class="glyph" viewBox="0 0 44 44" aria-hidden="true">
+              <circle cx="22" cy="22" r="19" fill="none" stroke="#2a3138" stroke-width="2"/>
+              <line x1="22" y1="22" x2="33" y2="10" stroke="#d7d69a" stroke-width="2.4" stroke-linecap="round"/>
+              <circle cx="22" cy="22" r="2.6" fill="#9aa6ac"/>
+              <g stroke="#667077" stroke-width="1.4">
+                <line x1="8" y1="30" x2="11" y2="28.5"/>
+                <line x1="7" y1="22" x2="10.5" y2="22"/>
+                <line x1="9" y1="14" x2="12" y2="15.5"/>
+              </g>
+            </svg>
+            <span class="abbr">GS</span>
+            <h3>Ground Speed</h3>
+            <p>GNSS-derived ground speed in knots. No fabricated movement when
+               a valid fix is unavailable.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================== CAPABILITIES ========================== -->
+    <section id="capabilities" aria-labelledby="capabilities-title">
+      <div class="wrap">
+        <p class="section-label">SYSTEMS</p>
+        <h2 id="capabilities-title">Built like an instrument, not an app</h2>
+        <p class="section-intro">
+          Every value on the panel carries an explicit data-quality state.
+          Unavailable data is flagged — never silently shown as zero.
+        </p>
+
+        <dl class="spec-grid">
+          <div class="spec">
+            <dt>Sensor-aware fallbacks</dt>
+            <dd>Each instrument selects the best available sensor and degrades
+                gracefully when hardware is missing, with the consequence
+                clearly reported.</dd>
+          </div>
+          <div class="spec">
+            <dt>Data-quality indicators</dt>
+            <dd>Per-instrument quality states (good / degraded / poor /
+                unavailable) on the panel and in diagnostics.</dd>
+          </div>
+          <div class="spec">
+            <dt>SET LEVEL &amp; mounting calibration</dt>
+            <dd>Quaternion-based level reference plus a mounting-orientation
+                setting, so any rigid mount works.</dd>
+          </div>
+          <div class="spec">
+            <dt>Magnetic / true heading</dt>
+            <dd>True heading applies local magnetic declination from the
+                on-device geomagnetic model.</dd>
+          </div>
+          <div class="spec">
+            <dt>Adjustable QNH</dt>
+            <dd>Altimeter setting in hectopascals with a one-tap reset to
+                standard pressure 1013.25 hPa.</dd>
+          </div>
+          <div class="spec">
+            <dt>Day / night display</dt>
+            <dd>Red night-vision mode, brightness steps and a panel lock
+                against accidental touches.</dd>
+          </div>
+          <div class="spec">
+            <dt>Diagnostics</dt>
+            <dd>Live GNSS accuracy, satellite counts, sensor inventory and
+                per-channel data quality.</dd>
+          </div>
+          <div class="spec">
+            <dt>Local recording &amp; replay</dt>
+            <dd>Optional on-device recording of raw sensor and GNSS samples
+                for deterministic diagnostic replay. Never uploaded.</dd>
+          </div>
+          <div class="spec">
+            <dt>Portrait &amp; landscape</dt>
+            <dd>The panel reflows between a portrait stack and a landscape
+                layout with a side control rail.</dd>
+          </div>
+          <div class="spec">
+            <dt>Tap to enlarge</dt>
+            <dd>Any instrument opens full-screen for at-a-glance legibility on
+                small displays.</dd>
+          </div>
+        </dl>
+      </div>
+    </section>
+
+    <!-- ============================= OFFLINE ============================ -->
+    <section id="offline" aria-labelledby="offline-title">
+      <div class="wrap">
+        <p class="section-label">PRIVACY BY ARCHITECTURE</p>
+        <h2 id="offline-title">Built to work offline</h2>
+
+        <div class="offline-card">
+          <div class="chips" aria-hidden="true">
+            <span class="chip">NO INTERNET PERMISSION</span>
+            <span class="chip">NO ACCOUNT</span>
+            <span class="chip">NO ADS · NO ANALYTICS SDK</span>
+            <span class="chip">ON-DEVICE PROCESSING</span>
+          </div>
+          <div class="copy">
+            <p>
+              All flight calculations — attitude, heading, altitude, vertical
+              speed and ground speed — are performed locally on your device
+              using its sensors and GNSS receiver. The Android application does
+              not request Android's INTERNET permission, so it has no ability
+              to transmit data over the network.
+            </p>
+            <p>
+              There is no account, no developer-operated backend, no
+              advertising and no analytics SDK. Settings, calibration and
+              optional diagnostic recordings stay in the app's local storage
+              on your device. Details are in the
+              <a href="./privacy/">privacy policy</a>.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================= SAFETY ============================= -->
+    <section class="safety-section" aria-labelledby="safety-title">
+      <div class="wrap">
+        <div class="safety-box">
+          <span class="label">SAFETY NOTICE</span>
+          <h2 id="safety-title" style="margin-top:0">Know what this is — and what it is not</h2>
+          <p>
+            For supplemental and experimental use only. EVionics is not a
+            certified flight instrument and is not a substitute for approved
+            aircraft instrumentation or navigation equipment. Consumer device
+            sensors are affected by vibration, temperature, mounting and
+            magnetic interference. Always fly by your aircraft's approved
+            instruments and applicable regulations.
+          </p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <span class="brand-name" style="font-size:15px">EVIONICS</span>
+      <a href="./privacy/">Privacy Policy</a>
+      <span>&copy; 2026 EVionics</span>
+      <span class="disclaimer">
+        For supplemental and experimental use only. Not a certified flight
+        instrument and not a substitute for approved aircraft instrumentation.
+      </span>
+    </div>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EVionics Privacy Policy</title>
+  <meta name="description" content="Privacy policy for EVionics, the offline flight-instrument application for Android. Sensor and GNSS data are processed on-device; the app has no internet permission.">
+  <link rel="icon" type="image/png" href="../assets/evionics-icon.png">
+  <link rel="stylesheet" href="../assets/styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="../">
+        <img src="../assets/evionics-icon.png" alt="" aria-hidden="true">
+        <span class="brand-name">EVIONICS</span>
+      </a>
+      <nav class="header-nav" aria-label="Site">
+        <a href="../">Home</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main" class="doc">
+    <h1>EVionics Privacy Policy</h1>
+    <p class="effective">Effective date: August 17, 2026</p>
+
+    <nav class="toc" aria-label="Table of contents">
+      <strong>Contents</strong>
+      <ol>
+        <li><a href="#overview">Overview</a></li>
+        <li><a href="#location">Location and GNSS data</a></li>
+        <li><a href="#sensors">Device sensor data</a></li>
+        <li><a href="#recordings">Diagnostic recordings</a></li>
+        <li><a href="#settings">Settings and calibration data</a></li>
+        <li><a href="#internet">Internet access and third-party services</a></li>
+        <li><a href="#sharing">Data sharing and sale</a></li>
+        <li><a href="#retention">Data retention and deletion</a></li>
+        <li><a href="#permissions">Permissions</a></li>
+        <li><a href="#children">Children's privacy</a></li>
+        <li><a href="#security">Security</a></li>
+        <li><a href="#changes">Changes to this policy</a></li>
+        <li><a href="#contact">Contact</a></li>
+      </ol>
+    </nav>
+
+    <h2 id="overview">1. Overview</h2>
+    <p>
+      EVionics is an Android flight-instrument utility that presents attitude,
+      heading, altitude, vertical speed and ground speed using the sensors and
+      GNSS receiver built into your Android device. All sensor and GNSS
+      processing is performed directly on your device. The application does
+      not include the Android INTERNET permission and therefore has no ability
+      to transmit data over the network.
+    </p>
+
+    <h2 id="location">2. Location and GNSS data</h2>
+    <p>
+      EVionics requests location permission because several instruments depend
+      on the device's GNSS (satellite navigation) receiver:
+    </p>
+    <ul>
+      <li>ground speed</li>
+      <li>GNSS track over ground</li>
+      <li>GNSS altitude, including on-device conversion to mean sea level
+          where the Android version supports it</li>
+      <li>GNSS accuracy information and satellite status shown in
+          diagnostics</li>
+      <li>magnetic declination for true-heading display, computed from your
+          position using Android's built-in geomagnetic model</li>
+    </ul>
+    <p>
+      Location is used in the foreground, while the application is in use.
+      EVionics does not request Android's background-location permission and
+      does not receive location updates when the app is not running in the
+      foreground.
+    </p>
+    <p>
+      The application itself does not transmit location or GNSS information to
+      any EVionics- or developer-operated server. It has no network access of
+      its own.
+    </p>
+
+    <h2 id="sensors">3. Device sensor data</h2>
+    <p>
+      EVionics reads the device's motion and environment sensors to drive the
+      instruments:
+    </p>
+    <ul>
+      <li>rotation-vector orientation sensors (the Android operating system
+          fuses these from the accelerometer, gyroscope and magnetometer) —
+          used for attitude and heading</li>
+      <li>the barometric pressure sensor, where present — used for altitude
+          and vertical speed</li>
+    </ul>
+    <p>
+      The app also checks which sensors exist on your device (accelerometer,
+      gyroscope, magnetometer, rotation vectors, barometer) in order to select
+      data sources and to show a hardware inventory in diagnostics. Sensor
+      readings are processed on the device and are not transmitted anywhere by
+      the application.
+    </p>
+
+    <h2 id="recordings">4. Diagnostic recordings</h2>
+    <p>
+      EVionics includes an optional diagnostic recording feature, started and
+      stopped manually from the diagnostics screen. When recording is active,
+      raw sensor samples and GNSS samples — including position, altitude,
+      speed, bearing and accuracy values with timestamps — are written to a
+      file in the application's private storage on your device
+      (in the app-private <span style="font-family:var(--mono)">recordings</span>
+      folder). Recordings exist so that instrument filtering can be replayed
+      and verified deterministically inside the app. They are never uploaded
+      by EVionics.
+    </p>
+    <p>
+      EVionics itself does not upload diagnostic recordings to
+      developer-operated servers. Depending on your Android device and backup
+      settings, locally stored application data — including settings and
+      diagnostic recordings — may be included in backups managed by the
+      Android operating system or your platform provider (for example, device
+      cloud backup). Those backups are governed by your device's and platform
+      provider's settings and policies, not by EVionics.
+    </p>
+
+    <h2 id="settings">5. Settings and calibration data</h2>
+    <p>
+      Preferences such as the SET LEVEL attitude calibration, mounting
+      orientation, QNH altimeter setting and heading-reference choice are
+      stored locally on your device in the application's private storage. They
+      are not transmitted by the application.
+    </p>
+
+    <h2 id="internet">6. Internet access and third-party services</h2>
+    <ul>
+      <li>The Android application does not request the INTERNET
+          permission.</li>
+      <li>There is no developer-operated backend used by the flight-instrument
+          functionality.</li>
+      <li>The application contains no advertising SDKs.</li>
+      <li>The application contains no analytics SDKs.</li>
+      <li>No account is required or supported.</li>
+    </ul>
+
+    <h2 id="sharing">7. Data sharing and sale</h2>
+    <ul>
+      <li>EVionics does not sell user data.</li>
+      <li>EVionics does not share flight, sensor or location information with
+          advertisers.</li>
+      <li>The developer does not receive your flight data through any EVionics
+          backend — none exists.</li>
+    </ul>
+    <p>
+      This describes the behavior of the EVionics application and its
+      developer. Android system services on your device (such as the operating
+      system's location services or platform backup) operate under your device
+      settings and your platform provider's policies.
+    </p>
+
+    <h2 id="retention">8. Data retention and deletion</h2>
+    <p>
+      All EVionics data lives on your device. You can remove it at any time:
+    </p>
+    <ul>
+      <li>Android Settings → Apps → EVionics → Storage → <em>Clear
+          storage / Clear data</em> removes all settings, calibration and
+          diagnostic recordings.</li>
+      <li>Uninstalling the application removes its private storage.</li>
+      <li>In the app, the SET LEVEL attitude calibration can be cleared from
+          the settings screen.</li>
+    </ul>
+    <p>
+      The current version does not provide in-app deletion of individual
+      diagnostic recording files; use the Android storage controls above to
+      remove them.
+    </p>
+
+    <h2 id="permissions">9. Permissions</h2>
+    <p>
+      EVionics requests precise location
+      (<span style="font-family:var(--mono)">ACCESS_FINE_LOCATION</span>) and
+      its Android-required companion, approximate location
+      (<span style="font-family:var(--mono)">ACCESS_COARSE_LOCATION</span>).
+      Precise location is needed because GNSS-derived speed, track and
+      altitude are only meaningful at full accuracy.
+    </p>
+    <p>
+      If you deny location permission, the application continues to function:
+      attitude, heading and barometric altitude remain available from the
+      device's sensors, while GNSS-dependent values — ground speed, track,
+      GNSS altitude and true-heading declination — are shown as unavailable or
+      degraded rather than fabricated.
+    </p>
+
+    <h2 id="children">10. Children's privacy</h2>
+    <p>
+      EVionics is a specialized aviation utility and is not designed or
+      directed toward children.
+    </p>
+
+    <h2 id="security">11. Security</h2>
+    <p>
+      EVionics follows a local-processing model: data is processed and stored
+      in the application's private storage area, which Android isolates from
+      other applications, and the app has no network capability of its own.
+      No system can guarantee absolute security; the physical security of the
+      device and your Android security settings (such as screen lock and
+      device encryption) remain important.
+    </p>
+
+    <h2 id="changes">12. Changes to this policy</h2>
+    <p>
+      If the application's functionality or data practices change, this policy
+      will be updated and the effective date above revised. The current
+      version of the policy is always available at this address.
+    </p>
+
+    <h2 id="contact">13. Contact</h2>
+    <!-- TODO: Replace with the official EVionics support/privacy contact email before publishing to Google Play. -->
+    <p class="contact-box">
+      Contact: [ADD SUPPORT EMAIL BEFORE PUBLICATION]
+    </p>
+
+    <p style="margin-top:40px">
+      <a href="../">&larr; Back to EVionics</a>
+    </p>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <span class="brand-name" style="font-size:15px">EVIONICS</span>
+      <a href="../">Home</a>
+      <span>&copy; 2026 EVionics</span>
+      <span class="disclaimer">
+        For supplemental and experimental use only. Not a certified flight
+        instrument and not a substitute for approved aircraft instrumentation.
+      </span>
+    </div>
+  </footer>
+</body>
+</html>
