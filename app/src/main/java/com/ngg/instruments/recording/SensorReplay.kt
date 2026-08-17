@@ -22,9 +22,14 @@ class SensorReplay(
 ) : FlightDataSources {
 
     override val samples: Flow<RawSample> = flow {
+        // Recorded arrival order is preserved deliberately: sensor and GNSS
+        // timestamps may live in different time bases, so a global sort by
+        // timestamp would regroup the file into "all GNSS, then all sensors"
+        // and destroy the interleaving the engine sees live. Playback pacing
+        // therefore clamps out-of-order gaps rather than reordering samples.
         val parsed = file.useLines { lines ->
             lines.mapNotNull(RecordingCodec::decode).toList()
-        }.sortedBy { it.elapsedNanos }
+        }
 
         var previousNanos = Long.MIN_VALUE
         for (sample in parsed) {

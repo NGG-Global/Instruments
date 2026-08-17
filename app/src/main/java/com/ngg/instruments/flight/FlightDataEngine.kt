@@ -22,7 +22,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlin.math.max
 
 /** Settings the engine needs; provided as a flow so changes apply live. */
 data class EngineSettings(
@@ -70,11 +69,42 @@ class FlightDataEngine(
 
     private var lastFix: GnssFix? = null
     private var lastStatus: GnssStatusSample? = null
+    private var statusNanos = Long.MIN_VALUE
     private var declinationDeg: Float? = null
     private var declinationFixTimeMs = 0L
 
-    /** Sample-driven monotonic clock (max observed elapsedNanos). */
-    private var sampleClockNanos = Long.MIN_VALUE
+    /**
+     * Sample-driven monotonic engine clock, in nanoseconds.
+     *
+     * Raw timestamps cannot be compared across sources: SensorEvent.timestamp
+     * is not guaranteed to share the SystemClock.elapsedRealtimeNanos base that
+     * Location uses, and on real hardware the two can be hours apart. Feeding
+     * both into one max() clock makes whichever source runs "ahead" declare the
+     * other permanently stale — which silently kills ground speed, track and
+     * GNSS altitude (or, mirrored, attitude and heading).
+     *
+     * Each source therefore gets a one-time offset that maps its first sample
+     * onto the current engine time; afterwards its own deltas advance the
+     * shared timeline. Staleness is then measured on a single consistent clock,
+     * and a source that stops sending still ages out correctly because the
+     * other sources keep the clock moving. Offsets depend only on sample order,
+     * so replay stays deterministic.
+     */
+    private var engineNowNanos = 0L
+    private var hasAnySample = false
+
+    /** Time-base offsets: index 0 = SensorManager sources, 1 = GNSS sources. */
+    private val sourceOffsets = arrayOfNulls<Long>(2)
+
+    private fun normalize(rawNanos: Long, source: Int): Long {
+        val offset = sourceOffsets[source] ?: (rawNanos - engineNowNanos).also {
+            sourceOffsets[source] = it
+        }
+        val t = rawNanos - offset
+        if (t > engineNowNanos) engineNowNanos = t
+        hasAnySample = true
+        return t
+    }
 
     fun resetEstimators() {
         attitudeEstimator.reset()
@@ -85,7 +115,12 @@ class FlightDataEngine(
         speedEstimator.reset()
         lastFix = null
         lastStatus = null
-        sampleClockNanos = Long.MIN_VALUE
+        statusNanos = Long.MIN_VALUE
+        engineNowNanos = 0L
+        hasAnySample = false
+        sourceOffsets.fill(null)
+        declinationDeg = null
+        declinationFixTimeMs = 0L
     }
 
     /**
@@ -101,12 +136,14 @@ class FlightDataEngine(
         }
         launch {
             sources.samples.collect { sample ->
-                sampleClockNanos = max(sampleClockNanos, sample.elapsedNanos)
                 when (sample) {
-                    is RotationSample -> onRotation(sample)
-                    is PressureSample -> onPressure(sample)
-                    is GnssSample -> onGnss(sample)
-                    is GnssStatusSample -> lastStatus = sample
+                    is RotationSample -> onRotation(sample, normalize(sample.elapsedNanos, SENSOR_SOURCE))
+                    is PressureSample -> onPressure(sample, normalize(sample.elapsedNanos, SENSOR_SOURCE))
+                    is GnssSample -> onGnss(sample, normalize(sample.elapsedNanos, GNSS_SOURCE))
+                    is GnssStatusSample -> {
+                        statusNanos = normalize(sample.elapsedNanos, GNSS_SOURCE)
+                        lastStatus = sample
+                    }
                 }
             }
         }
@@ -119,29 +156,29 @@ class FlightDataEngine(
         }
     }
 
-    private fun onRotation(sample: RotationSample) {
+    private fun onRotation(sample: RotationSample, tNanos: Long) {
         when (sample.kind) {
-            RotationKind.GAME -> attitudeEstimator.update(sample.quaternion, sample.elapsedNanos)
+            RotationKind.GAME -> attitudeEstimator.update(sample.quaternion, tNanos)
             RotationKind.MAGNETIC -> headingEstimator.update(
-                sample.quaternion, settings.mount, sample.accuracy, sample.elapsedNanos,
+                sample.quaternion, settings.mount, sample.accuracy, tNanos,
             )
         }
     }
 
-    private fun onPressure(sample: PressureSample) {
-        val baroAltM = altitudeEstimator.onPressure(sample.pressureHpa, sample.elapsedNanos)
-        if (baroAltM != null) baroVsi.addSample(baroAltM, sample.elapsedNanos)
+    private fun onPressure(sample: PressureSample, tNanos: Long) {
+        val baroAltM = altitudeEstimator.onPressure(sample.pressureHpa, tNanos)
+        if (baroAltM != null) baroVsi.addSample(baroAltM, tNanos)
     }
 
-    private fun onGnss(sample: GnssSample) {
+    private fun onGnss(sample: GnssSample, tNanos: Long) {
         val fix = sample.fix
         lastFix = fix
-        speedEstimator.onGnssSpeed(fix.speedMps, sample.elapsedNanos)
+        speedEstimator.onGnssSpeed(fix.speedMps, tNanos)
 
         val gnssAlt = fix.altitudeMslM ?: fix.altitudeWgs84M
-        val filteredGnssAlt = altitudeEstimator.onGnssAltitude(gnssAlt, sample.elapsedNanos)
+        val filteredGnssAlt = altitudeEstimator.onGnssAltitude(gnssAlt, tNanos)
         if (!hasBarometer && filteredGnssAlt != null) {
-            gnssVsi.addSample(filteredGnssAlt, sample.elapsedNanos)
+            gnssVsi.addSample(filteredGnssAlt, tNanos)
         }
 
         // Refresh declination when we have moved or enough time has passed.
@@ -154,11 +191,14 @@ class FlightDataEngine(
     }
 
     private fun publish() {
-        val now = sampleClockNanos
-        if (now == Long.MIN_VALUE) {
+        if (!hasAnySample) {
             _state.value = FlightState(qnhHpa = settings.qnhHpa)
             return
         }
+        val now = engineNowNanos
+        // The quality evaluator reads raw Location timestamps, so give it "now"
+        // converted back into the GNSS time base (raw = engine + offset).
+        val gnssNow = sourceOffsets[GNSS_SOURCE]?.let { now + it } ?: now
 
         // --- Attitude ---
         val pitchRoll = if (attitudeEstimator.isFresh(now)) {
@@ -178,17 +218,17 @@ class FlightDataEngine(
 
         // --- GNSS-derived quantities ---
         val fix = lastFix
-        val status = lastStatus?.takeIf { now - it.elapsedNanos <= STATUS_STALE_NS }
-        val gnssQuality = LocationQualityEvaluator.evaluate(fix, now)
-        val track = if (LocationQualityEvaluator.isTrackUsable(fix, now)) fix?.bearingDeg else null
+        val status = lastStatus?.takeIf { now - statusNanos <= STATUS_STALE_NS }
+        val gnssQuality = LocationQualityEvaluator.evaluate(fix, gnssNow)
+        val track = if (LocationQualityEvaluator.isTrackUsable(fix, gnssNow)) fix?.bearingDeg else null
         val speedKt = speedEstimator.groundSpeedKt(now)
         val speedQuality = if (speedKt == null) DataQuality.UNAVAILABLE else {
-            LocationQualityEvaluator.speedQuality(fix, now)
+            LocationQualityEvaluator.speedQuality(fix, gnssNow)
         }
 
         // --- Altitude ---
         val altitude = altitudeEstimator.solution(now)
-        val gnssAltQuality = LocationQualityEvaluator.altitudeQuality(fix, now)
+        val gnssAltQuality = LocationQualityEvaluator.altitudeQuality(fix, gnssNow)
         val altitudeQuality = when (altitude.source) {
             AltitudeSource.BAROMETRIC -> DataQuality.GOOD
             AltitudeSource.GNSS -> gnssAltQuality
@@ -247,5 +287,7 @@ class FlightDataEngine(
         const val PUBLISH_PERIOD_MS = 33L // ~30 Hz state publication
         const val DECLINATION_REFRESH_MS = 10 * 60 * 1000L
         const val STATUS_STALE_NS = 6_000_000_000L
+        const val SENSOR_SOURCE = 0
+        const val GNSS_SOURCE = 1
     }
 }

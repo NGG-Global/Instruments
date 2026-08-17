@@ -59,6 +59,21 @@ fun DiagnosticsScreen(
             QualityRow("GROUND SPEED", flight.speedQuality, null)
         }
 
+        // Live numbers behind each instrument, so a panel that looks "stuck"
+        // can be diagnosed on the aircraft: a dash means the estimator has no
+        // valid data, not that the needle is broken.
+        SectionCard(title = "LIVE VALUES") {
+            DetailRow("Pitch / roll", if (flight.pitchDeg != null && flight.rollDeg != null) {
+                "%+.1f° / %+.1f°".format(flight.pitchDeg, flight.rollDeg)
+            } else "—")
+            DetailRow("Magnetic heading", flight.magneticHeadingDeg?.let { "%.0f°".format(it) } ?: "—")
+            DetailRow("True heading", flight.trueHeadingDeg?.let { "%.0f°".format(it) } ?: "—")
+            DetailRow("GNSS track", flight.trackDeg?.let { "%.0f°".format(it) } ?: "— (needs motion)")
+            DetailRow("Altitude", flight.altitudeFt?.let { "%.0f ft".format(it) } ?: "—")
+            DetailRow("Vertical speed", flight.verticalSpeedFpm?.let { "%+.0f fpm".format(it) } ?: "—")
+            DetailRow("Ground speed", flight.groundSpeedKt?.let { "%.1f kt".format(it) } ?: "—")
+        }
+
         SectionCard(title = "GNSS DETAIL") {
             DetailRow("Satellites used", flight.satellitesUsed?.toString() ?: "—")
             DetailRow("Horizontal accuracy", flight.horizontalAccuracyM?.let { "±%.1f m".format(it) } ?: "—")
