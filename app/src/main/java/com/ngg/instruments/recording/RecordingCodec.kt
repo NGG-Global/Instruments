@@ -3,6 +3,7 @@ package com.ngg.instruments.recording
 import com.ngg.instruments.gnss.GnssFix
 import com.ngg.instruments.math.Quaternion
 import com.ngg.instruments.sensor.GnssSample
+import com.ngg.instruments.sensor.GnssStatusSample
 import com.ngg.instruments.sensor.PressureSample
 import com.ngg.instruments.sensor.RawSample
 import com.ngg.instruments.sensor.RotationKind
@@ -18,6 +19,7 @@ import com.ngg.instruments.sensor.RotationSample
  *   mrv,<ns>,w,x,y,z,accuracy          magnetic rotation vector
  *   prs,<ns>,hPa,accuracy              pressure
  *   gps,<ns>,lat,lon,wgs,msl,spd,brg,hacc,vacc,sacc,bacc,timeMs
+ *   sat,<ns>,used,visible              constellation status
  * Missing values are encoded as "-".
  */
 object RecordingCodec {
@@ -38,6 +40,9 @@ object RecordingCodec {
 
         is PressureSample ->
             "prs,${sample.elapsedNanos},${sample.pressureHpa},${sample.accuracy}"
+
+        is GnssStatusSample ->
+            "sat,${sample.elapsedNanos},${sample.satellitesUsed},${sample.satellitesVisible}"
 
         is GnssSample -> {
             val fx = sample.fix
@@ -64,6 +69,12 @@ object RecordingCodec {
                     elapsedNanos = p[1].toLong(),
                     pressureHpa = p[2].toFloat(),
                     accuracy = p[3].toInt(),
+                )
+
+                "sat" -> GnssStatusSample(
+                    elapsedNanos = p[1].toLong(),
+                    satellitesUsed = p[2].toInt(),
+                    satellitesVisible = p[3].toInt(),
                 )
 
                 "gps" -> GnssSample(

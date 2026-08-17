@@ -3,6 +3,7 @@ package com.ngg.instruments.ui
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.LaunchedEffect
@@ -10,6 +11,7 @@ import androidx.compose.runtime.withFrameNanos
 import com.ngg.instruments.math.Angles
 import kotlin.math.abs
 import kotlin.math.exp
+import kotlin.math.roundToInt
 
 /**
  * Display-animation layer (RAW -> ESTIMATED -> DISPLAY). Estimation filtering
@@ -57,3 +59,27 @@ fun rememberDisplayValue(
 }
 
 private const val SNAP_EPSILON = 0.005f
+
+/**
+ * Quantizes an eased value to a whole number with a deadband: the displayed
+ * integer only changes once the source moves more than [deadband] away from
+ * it, so readouts do not flicker at rounding boundaries. State is mutated in
+ * the frame-callback layer, never in the draw phase.
+ */
+@Composable
+fun rememberDeadbandInt(source: State<Float>, deadband: Float): State<Int> {
+    val out = remember {
+        mutableIntStateOf(source.value.takeIf { it.isFinite() }?.roundToInt() ?: 0)
+    }
+    LaunchedEffect(deadband) {
+        while (true) {
+            withFrameNanos {
+                val v = source.value
+                if (v.isFinite() && abs(v - out.intValue) > deadband) {
+                    out.intValue = v.roundToInt()
+                }
+            }
+        }
+    }
+    return out
+}

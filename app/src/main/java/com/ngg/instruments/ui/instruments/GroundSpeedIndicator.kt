@@ -18,6 +18,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
+import com.ngg.instruments.ui.theme.BarlowCondensed
 import com.ngg.instruments.ui.theme.Palette
 import kotlin.math.cos
 import kotlin.math.min
@@ -85,7 +86,7 @@ private fun DrawScope.drawSpeedDial(textMeasurer: TextMeasurer, dialR: Float) {
         )
     }
 
-    val numberStyle = TextStyle(color = ink, fontSize = (s * 0.036f).toSp(), fontWeight = FontWeight.Bold)
+    val numberStyle = TextStyle(fontFamily = BarlowCondensed, color = ink, fontSize = (s * 0.036f).toSp(), fontWeight = FontWeight.Bold)
     for (v in 0..900 step 100) {
         val a = Math.toRadians(speedAngleDeg(v.toFloat()).toDouble())
         val rr = dialR * 0.62f
@@ -99,7 +100,7 @@ private fun DrawScope.drawSpeedDial(textMeasurer: TextMeasurer, dialR: Float) {
         )
     }
 
-    val wordStyle = TextStyle(color = ink, fontSize = (s * 0.033f).toSp(), fontWeight = FontWeight.Bold)
+    val wordStyle = TextStyle(fontFamily = BarlowCondensed, color = ink, fontSize = (s * 0.033f).toSp(), fontWeight = FontWeight.Bold)
     listOf("GROUND" to 0.075f, "SPEED" to 0.111f, "KNOTS" to 0.147f).forEach { (word, dy) ->
         val layout = textMeasurer.measure(AnnotatedString(word), wordStyle)
         drawText(

@@ -10,7 +10,7 @@ import com.ngg.instruments.flight.DataQuality
 object Palette {
     val panelBackground = Color(0xFF030405)
     val slotBackground = Color(0xFF070809)
-    val slotBorder = Color(0xFF202427)
+    val slotBorder = Color(0xFF1B1F22)
 
     // Matte black painted housings
     val housingTop = Color(0xFF2D3236)

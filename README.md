@@ -71,6 +71,29 @@ per-frame work is only the moving parts: geometric horizon transforms
 compass card, and needle paths. Needle values are read inside the draw phase,
 so animation never recomposes the tree.
 
+## Panel chrome and splash (design package)
+
+The panel UI follows the delivered mobile design:
+
+- **Splash loading animation** — the winged attitude-indicator logo
+  (`ui/splash/AttitudeSplash.kt`, from the design package): bezel snap-in,
+  feathers unfolding, an indeterminate horizon-roll loop while the app warms
+  up, then a levelled horizon, shimmer sweep and fade into the panel.
+- **Status bar** — live GNSS state (fix, satellites used from `GnssStatus`,
+  horizontal accuracy), IMU state, clock and battery; LOCKED annunciator.
+- **Control bar / rail** — DAY/NIGHT (red night-vision multiply overlay),
+  brightness cycle (100/70/45), LOCK (freezes all panel interaction),
+  DIAG and SETTINGS. Horizontal bar in portrait, trailing-edge rail in
+  landscape.
+- **Landscape layout** — attitude square on the left, 2×2 dial grid beside
+  it, control rail on the trailing edge. Rotation reflows without recreating
+  the activity.
+- **Typography** — Barlow Condensed (SIL OFL 1.1; license bundled at
+  `assets/licenses/OFL-BarlowCondensed.txt`), packaged in `res/font` so the
+  app stays fully offline.
+- **Launcher icon** — the winged-gauge artwork from the design package as an
+  adaptive icon.
+
 ## Offline behavior
 
 Everything works in airplane mode with Wi-Fi and mobile data off:

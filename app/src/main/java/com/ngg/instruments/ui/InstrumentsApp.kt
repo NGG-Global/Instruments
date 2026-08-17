@@ -1,6 +1,7 @@
 package com.ngg.instruments.ui
 
 import android.Manifest
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.AlertDialog
@@ -15,8 +16,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
@@ -60,7 +65,37 @@ fun InstrumentsApp(container: AppContainer) {
         }
     }
 
-    if (settings == null) return // settings still loading from DataStore
+    // Designer splash: plays its intro + one loading loop minimum, resolves
+    // once persisted settings are loaded, then fades into the app.
+    com.ngg.instruments.ui.splash.SplashHost(ready = settings != null) {
+        if (settings != null) {
+            MainContent(
+                container = container,
+                settings = settings,
+                mode = mode,
+                hasLocationPermission = hasLocationPermission,
+                onRequestPermission = {
+                    permissionLauncher.launch(
+                        arrayOf(
+                            Manifest.permission.ACCESS_FINE_LOCATION,
+                            Manifest.permission.ACCESS_COARSE_LOCATION,
+                        ),
+                    )
+                },
+            )
+        }
+    }
+}
+
+@Composable
+private fun MainContent(
+    container: AppContainer,
+    settings: AppSettings,
+    mode: com.ngg.instruments.EngineMode,
+    hasLocationPermission: Boolean,
+    onRequestPermission: () -> Unit,
+) {
+    val scope = rememberCoroutineScope()
 
     var screen by remember(settings.onboardingComplete) {
         mutableStateOf(if (settings.onboardingComplete) Screen.PANEL else Screen.ONBOARDING)
@@ -80,7 +115,7 @@ fun InstrumentsApp(container: AppContainer) {
             container = container,
             settings = settings,
             hasLocationPermission = hasLocationPermission,
-            onRequestPermission = { permissionLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)) },
+            onRequestPermission = onRequestPermission,
             onSetLevel = ::setLevel,
             onEditQnh = { showQnhDialog = true },
             onDone = {
@@ -92,9 +127,7 @@ fun InstrumentsApp(container: AppContainer) {
         Screen.PANEL -> {
             // Ask for permission on entry if it was never granted.
             LaunchedEffect(Unit) {
-                if (!hasLocationPermission) {
-                    permissionLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
-                }
+                if (!hasLocationPermission) onRequestPermission()
             }
             InstrumentPanelScreen(
                 flight = flight,
@@ -107,30 +140,38 @@ fun InstrumentsApp(container: AppContainer) {
             )
         }
 
-        Screen.SETTINGS -> com.ngg.instruments.ui.settings.SettingsScreen(
-            settings = settings,
-            onSetLevel = ::setLevel,
-            onClearCalibration = { scope.launch { container.calibrationRepository.clearAttitudeReference() } },
-            onMountSelected = { mount: MountOrientation ->
-                scope.launch { container.calibrationRepository.setMountOrientation(mount) }
-            },
-            onUseTrueHeading = { scope.launch { container.calibrationRepository.setUseTrueHeading(it) } },
-            onEditQnh = { showQnhDialog = true },
-            onBack = { screen = Screen.PANEL },
-        )
+        Screen.SETTINGS -> {
+            // System back mirrors the on-screen back control.
+            BackHandler { screen = Screen.PANEL }
+            com.ngg.instruments.ui.settings.SettingsScreen(
+                settings = settings,
+                declinationAvailable = flight.value.trueHeadingDeg != null,
+                onSetLevel = ::setLevel,
+                onClearCalibration = { scope.launch { container.calibrationRepository.clearAttitudeReference() } },
+                onMountSelected = { mount: MountOrientation ->
+                    scope.launch { container.calibrationRepository.setMountOrientation(mount) }
+                },
+                onUseTrueHeading = { scope.launch { container.calibrationRepository.setUseTrueHeading(it) } },
+                onEditQnh = { showQnhDialog = true },
+                onBack = { screen = Screen.PANEL },
+            )
+        }
 
-        Screen.DIAGNOSTICS -> com.ngg.instruments.ui.diagnostics.DiagnosticsScreen(
-            flight = flight.value,
-            capabilities = container.capabilities,
-            recordings = container.recorder.listRecordings(),
-            isRecording = mode.recording,
-            replayingFile = mode.replayFile,
-            hasLocationPermission = hasLocationPermission,
-            onToggleRecording = { container.setRecording(!mode.recording) },
-            onReplay = { container.startReplay(it) },
-            onStopReplay = { container.stopReplay() },
-            onBack = { screen = Screen.PANEL },
-        )
+        Screen.DIAGNOSTICS -> {
+            BackHandler { screen = Screen.PANEL }
+            com.ngg.instruments.ui.diagnostics.DiagnosticsScreen(
+                flight = flight.value,
+                capabilities = container.capabilities,
+                recordings = container.recorder.listRecordings(),
+                isRecording = mode.recording,
+                replayingFile = mode.replayFile,
+                hasLocationPermission = hasLocationPermission,
+                onToggleRecording = { container.setRecording(!mode.recording) },
+                onReplay = { container.startReplay(it) },
+                onStopReplay = { container.stopReplay() },
+                onBack = { screen = Screen.PANEL },
+            )
+        }
     }
 
     if (showQnhDialog) {
@@ -166,38 +207,100 @@ private fun OnboardingHost(
     )
 }
 
+/**
+ * QNH entry: decimal keyboard, pre-selected value, ±1 hPa steppers for the
+ * common small correction, inline validation naming the valid range, and a
+ * one-tap reset to standard pressure. AltimeterCalibration.isValid stays the
+ * single source of truth for the range.
+ */
 @Composable
 private fun QnhDialog(
     currentQnh: Float,
     onDismiss: () -> Unit,
     onConfirm: (Float) -> Unit,
 ) {
-    var text by remember { mutableStateOf(currentQnh.toString()) }
-    val parsed = text.toFloatOrNull()
+    fun format(v: Float): String = if (v % 1f == 0f) "%.0f".format(v) else "%.2f".format(v)
+
+    val focusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
+    var field by remember {
+        val text = format(currentQnh)
+        mutableStateOf(
+            androidx.compose.ui.text.input.TextFieldValue(
+                text = text,
+                selection = androidx.compose.ui.text.TextRange(0, text.length),
+            ),
+        )
+    }
+    val parsed = field.text.toFloatOrNull()
     val valid = parsed != null && AltimeterCalibration.isValid(parsed)
+
+    fun setValue(v: Float) {
+        val coerced = AltimeterCalibration.coerce(v)
+        val text = format(coerced)
+        field = androidx.compose.ui.text.input.TextFieldValue(
+            text = text,
+            selection = androidx.compose.ui.text.TextRange(text.length),
+        )
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("QNH (hPa)") },
+        title = { Text("Altimeter setting — QNH") },
         text = {
             androidx.compose.foundation.layout.Column {
-                OutlinedTextField(
-                    value = text,
-                    onValueChange = { text = it },
-                    singleLine = true,
-                    label = { Text("850 – 1100 hPa") },
-                )
-                Text(
-                    "Standard pressure is 1013.25 hPa. Use the local altimeter setting for indicated altitude.",
-                    modifier = Modifier.padding(top = 8.dp),
-                )
+                androidx.compose.foundation.layout.Row(
+                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                ) {
+                    TextButton(
+                        onClick = { setValue((parsed ?: currentQnh) - AltimeterCalibration.STEP_HPA) },
+                        modifier = Modifier
+                            .heightIn(min = 48.dp)
+                            .semantics { contentDescription = "Decrease QNH by 1 hectopascal" },
+                    ) { Text("−1") }
+                    OutlinedTextField(
+                        value = field,
+                        onValueChange = { field = it },
+                        singleLine = true,
+                        isError = !valid,
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                            keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal,
+                        ),
+                        supportingText = {
+                            Text(
+                                if (valid) "hPa" else "Enter a value between 850 and 1100 hPa",
+                            )
+                        },
+                        modifier = Modifier
+                            .weight(1f)
+                            .focusRequester(focusRequester)
+                            .semantics { contentDescription = "QNH in hectopascals" },
+                    )
+                    TextButton(
+                        onClick = { setValue((parsed ?: currentQnh) + AltimeterCalibration.STEP_HPA) },
+                        modifier = Modifier
+                            .heightIn(min = 48.dp)
+                            .semantics { contentDescription = "Increase QNH by 1 hectopascal" },
+                    ) { Text("+1") }
+                }
+                TextButton(
+                    onClick = { setValue(AltimeterCalibration.DEFAULT_QNH_HPA) },
+                    modifier = Modifier.heightIn(min = 48.dp),
+                ) {
+                    Text("Reset to standard 1013.25 hPa")
+                }
             }
         },
         confirmButton = {
-            TextButton(onClick = { parsed?.let(onConfirm) }, enabled = valid) { Text("SET") }
+            TextButton(
+                onClick = { parsed?.let(onConfirm) },
+                enabled = valid,
+                modifier = Modifier.heightIn(min = 48.dp),
+            ) { Text("SET") }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("CANCEL") }
+            TextButton(onClick = onDismiss, modifier = Modifier.heightIn(min = 48.dp)) { Text("CANCEL") }
         },
     )
+
+    LaunchedEffect(Unit) { focusRequester.requestFocus() }
 }

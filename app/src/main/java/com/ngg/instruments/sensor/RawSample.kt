@@ -40,6 +40,13 @@ data class GnssSample(
     override val elapsedNanos: Long,
 ) : RawSample
 
+/** Constellation status: satellites used in fix / visible. */
+data class GnssStatusSample(
+    val satellitesUsed: Int,
+    val satellitesVisible: Int,
+    override val elapsedNanos: Long,
+) : RawSample
+
 /**
  * A source of raw flight data. [LiveFlightDataSources] merges real sensors and
  * GNSS; [com.ngg.instruments.recording.SensorReplay] plays back a recording.

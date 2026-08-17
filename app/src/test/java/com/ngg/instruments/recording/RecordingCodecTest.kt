@@ -58,6 +58,12 @@ class RecordingCodecTest {
     }
 
     @Test
+    fun gnssStatusRoundTrip() {
+        val sample = com.ngg.instruments.sensor.GnssStatusSample(9, 14, 77L)
+        assertEquals(sample, RecordingCodec.decode(RecordingCodec.encode(sample)))
+    }
+
+    @Test
     fun headerAndGarbageAreIgnored() {
         assertNull(RecordingCodec.decode(RecordingCodec.HEADER))
         assertNull(RecordingCodec.decode(""))

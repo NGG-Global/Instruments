@@ -18,6 +18,7 @@ import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.TextMeasurer
+import com.ngg.instruments.ui.theme.BarlowCondensed
 import com.ngg.instruments.ui.theme.Palette
 import kotlin.math.cos
 import kotlin.math.min
@@ -55,11 +56,13 @@ fun HeadingIndicator(
             }
 
             val readoutStyle = TextStyle(
+                fontFamily = BarlowCondensed,
                 color = Color.White,
                 fontSize = (s * 0.052f).toSp(),
                 fontWeight = FontWeight.Bold,
             )
             val subStyle = TextStyle(
+                fontFamily = BarlowCondensed,
                 color = Palette.inkCream,
                 fontSize = (s * 0.032f).toSp(),
                 fontWeight = FontWeight.Bold,
@@ -145,11 +148,13 @@ private fun DrawScope.drawCompassCard(textMeasurer: TextMeasurer, dialR: Float) 
     drawDialFace(dialR)
 
     val labelStyle = TextStyle(
+                fontFamily = BarlowCondensed,
         color = Palette.inkWhite,
         fontSize = (s * 0.052f).toSp(),
         fontWeight = FontWeight.Bold,
     )
     val cardinalStyle = TextStyle(
+                fontFamily = BarlowCondensed,
         color = Palette.inkWhite,
         fontSize = (s * 0.062f).toSp(),
         fontWeight = FontWeight.Bold,

@@ -3,14 +3,18 @@ package com.ngg.instruments.gnss
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import android.location.GnssStatus
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import androidx.core.content.ContextCompat
 import com.ngg.instruments.sensor.GnssSample
+import com.ngg.instruments.sensor.GnssStatusSample
 import com.ngg.instruments.sensor.RawSample
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
@@ -19,6 +23,7 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.merge
 
 /**
  * GNSS fixes from the platform LocationManager GPS provider. Deliberately does
@@ -37,13 +42,42 @@ class GnssRepository(private val context: Context) {
     val samples: Flow<RawSample>
         get() {
             if (!hasPermission()) return emptyFlow()
-            return rawLocations()
+            val fixes = rawLocations()
                 .map { location ->
                     val msl = tryConvertToMsl(location)
                     GnssSample(fix = location.toGnssFix(msl), elapsedNanos = location.elapsedRealtimeNanos)
                 }
                 .flowOn(Dispatchers.IO) // AltitudeConverter performs disk I/O
+            return merge(fixes, constellationStatus())
         }
+
+    /** Satellite counts for the panel status line. */
+    private fun constellationStatus(): Flow<RawSample> = callbackFlow {
+        val lm = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        val callback = object : GnssStatus.Callback() {
+            override fun onSatelliteStatusChanged(status: GnssStatus) {
+                var used = 0
+                for (i in 0 until status.satelliteCount) {
+                    if (status.usedInFix(i)) used++
+                }
+                trySend(
+                    GnssStatusSample(
+                        satellitesUsed = used,
+                        satellitesVisible = status.satelliteCount,
+                        elapsedNanos = SystemClock.elapsedRealtimeNanos(),
+                    ),
+                )
+            }
+        }
+        val registered = try {
+            @Suppress("DEPRECATION") // Executor overload requires API 30; minSdk is 26
+            lm.registerGnssStatusCallback(callback, Handler(Looper.getMainLooper()))
+        } catch (se: SecurityException) {
+            false
+        }
+        if (!registered) close()
+        awaitClose { lm.unregisterGnssStatusCallback(callback) }
+    }
 
     private fun rawLocations(): Flow<Location> = callbackFlow {
         val lm = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
