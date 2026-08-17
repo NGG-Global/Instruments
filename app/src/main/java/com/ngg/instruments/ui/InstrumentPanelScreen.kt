@@ -1,8 +1,10 @@
 package com.ngg.instruments.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -20,14 +22,19 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -130,12 +137,22 @@ fun InstrumentPanelScreen(
 
     val locked = chrome.locked
 
+    // Tap-to-enlarge: a tapped instrument opens full-screen for legibility
+    // (all drawing is size-relative, so text scales up with it). LOCK blocks
+    // opening, which is its purpose: a locked panel ignores accidental taps.
+    var focusedName by rememberSaveable { mutableStateOf("") }
+    val focused = FocusedInstrument.entries.firstOrNull { it.name == focusedName }
+    fun focus(target: FocusedInstrument) {
+        if (!locked) focusedName = target.name
+    }
+
     @Composable
     fun attitudeSlot(modifier: Modifier) = InstrumentSlot(
         caption = "ATTITUDE",
         quality = attitudeQuality,
         chipText = attitudeChip,
         chipTop = true,
+        onClick = { focus(FocusedInstrument.ATTITUDE) },
         modifier = modifier,
     ) {
         AttitudeIndicator(pitch, roll, attitudeAvailable, Modifier.fillMaxSize())
@@ -144,22 +161,34 @@ fun InstrumentPanelScreen(
     @Composable
     fun dialGrid(modifier: Modifier) = Column(modifier, verticalArrangement = Arrangement.spacedBy(1.dp)) {
         Row(Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(1.dp)) {
-            InstrumentSlot("HEADING", headingQuality, modifier = Modifier.weight(1f).fillMaxHeight()) {
+            InstrumentSlot(
+                "HEADING", headingQuality,
+                onClick = { focus(FocusedInstrument.HEADING) },
+                modifier = Modifier.weight(1f).fillMaxHeight(),
+            ) {
                 HeadingIndicator(heading, headingAvailable, track, useTrueHeading, Modifier.fillMaxSize())
             }
             InstrumentSlot(
                 "ALTIMETER", altitudeQuality,
-                onClick = if (locked) null else onAltimeterTapped,
+                onClick = { focus(FocusedInstrument.ALTIMETER) },
                 modifier = Modifier.weight(1f).fillMaxHeight(),
             ) {
                 Altimeter(altitude, altitudeAvailable, qnh, Modifier.fillMaxSize())
             }
         }
         Row(Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(1.dp)) {
-            InstrumentSlot("VERTICAL SPEED", vsiQuality, chipText = vsiChip, modifier = Modifier.weight(1f).fillMaxHeight()) {
+            InstrumentSlot(
+                "VERTICAL SPEED", vsiQuality, chipText = vsiChip,
+                onClick = { focus(FocusedInstrument.VERTICAL_SPEED) },
+                modifier = Modifier.weight(1f).fillMaxHeight(),
+            ) {
                 VerticalSpeedIndicator(vsi, vsiAvailable, Modifier.fillMaxSize())
             }
-            InstrumentSlot("GROUND SPEED", speedQuality, chipText = speedChip, modifier = Modifier.weight(1f).fillMaxHeight()) {
+            InstrumentSlot(
+                "GROUND SPEED", speedQuality, chipText = speedChip,
+                onClick = { focus(FocusedInstrument.GROUND_SPEED) },
+                modifier = Modifier.weight(1f).fillMaxHeight(),
+            ) {
                 GroundSpeedIndicator(speed, speedAvailable, Modifier.fillMaxSize())
             }
         }
@@ -208,6 +237,109 @@ fun InstrumentPanelScreen(
                     PanelControlRail(chrome, onOpenDiagnostics, onOpenSettings)
                 }
             }
+
+            // Enlarged single-instrument view. Rendered inside the overlay box
+            // so night mode and dimming apply to it as well.
+            if (focused != null) {
+                FocusedInstrumentOverlay(
+                    focused = focused,
+                    onClose = { focusedName = "" },
+                    onAdjustQnh = onAltimeterTapped,
+                ) { instrumentModifier ->
+                    when (focused) {
+                        FocusedInstrument.ATTITUDE ->
+                            AttitudeIndicator(pitch, roll, attitudeAvailable, instrumentModifier)
+                        FocusedInstrument.HEADING ->
+                            HeadingIndicator(heading, headingAvailable, track, useTrueHeading, instrumentModifier)
+                        FocusedInstrument.ALTIMETER ->
+                            Altimeter(altitude, altitudeAvailable, qnh, instrumentModifier)
+                        FocusedInstrument.VERTICAL_SPEED ->
+                            VerticalSpeedIndicator(vsi, vsiAvailable, instrumentModifier)
+                        FocusedInstrument.GROUND_SPEED ->
+                            GroundSpeedIndicator(speed, speedAvailable, instrumentModifier)
+                    }
+                }
+            }
+        }
+    }
+}
+
+private enum class FocusedInstrument(val title: String) {
+    ATTITUDE("ATTITUDE"),
+    HEADING("HEADING"),
+    ALTIMETER("ALTIMETER"),
+    VERTICAL_SPEED("VERTICAL SPEED"),
+    GROUND_SPEED("GROUND SPEED"),
+}
+
+/**
+ * Full-screen enlarged view of one instrument. The instrument composables are
+ * reused as-is; because all their geometry and typography scale with the
+ * drawn size, the enlarged face is fully legible. Tap anywhere or press the
+ * system back button to return to the panel.
+ */
+@Composable
+private fun FocusedInstrumentOverlay(
+    focused: FocusedInstrument,
+    onClose: () -> Unit,
+    onAdjustQnh: () -> Unit,
+    instrument: @Composable (Modifier) -> Unit,
+) {
+    BackHandler(onBack = onClose)
+
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Color(0xF5030405))
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClickLabel = "Close enlarged instrument",
+                onClick = onClose,
+            )
+            .windowInsetsPadding(WindowInsets.safeDrawing)
+            .semantics { contentDescription = "Enlarged ${focused.title} instrument" },
+    ) {
+        Column(
+            Modifier.fillMaxSize().padding(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                focused.title,
+                color = Color(0x99E9EEF0),
+                fontSize = 13.sp,
+                fontFamily = BarlowCondensed,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = 3.sp,
+                modifier = Modifier.padding(vertical = 6.dp),
+            )
+            Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                instrument(Modifier.fillMaxSize())
+            }
+            if (focused == FocusedInstrument.ALTIMETER) {
+                OutlinedButton(
+                    onClick = onAdjustQnh,
+                    modifier = Modifier
+                        .heightIn(min = 48.dp)
+                        .padding(top = 4.dp),
+                ) {
+                    Text(
+                        "ADJUST QNH",
+                        fontFamily = BarlowCondensed,
+                        fontWeight = FontWeight.SemiBold,
+                        letterSpacing = 1.5.sp,
+                        color = Palette.inkCream,
+                    )
+                }
+            }
+            Text(
+                "TAP TO CLOSE",
+                color = Color(0x66E9EEF0),
+                fontSize = 10.sp,
+                fontFamily = BarlowCondensed,
+                letterSpacing = 2.sp,
+                modifier = Modifier.padding(vertical = 8.dp),
+            )
         }
     }
 }
