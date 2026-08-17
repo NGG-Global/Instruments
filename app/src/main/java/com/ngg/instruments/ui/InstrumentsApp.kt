@@ -9,6 +9,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -25,6 +26,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import com.ngg.instruments.AppContainer
@@ -50,6 +52,18 @@ fun InstrumentsApp(container: AppContainer) {
     val settings = settingsState.value
 
     var hasLocationPermission by remember { mutableStateOf(container.gnssRepository.hasPermission()) }
+
+    // The user may grant location from Android settings and come back, so the
+    // grant is re-read on every resume rather than only at first composition.
+    DisposableEffect(lifecycle) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                hasLocationPermission = container.gnssRepository.hasPermission()
+            }
+        }
+        lifecycle.addObserver(observer)
+        onDispose { lifecycle.removeObserver(observer) }
+    }
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
     ) { grants ->
@@ -105,8 +119,14 @@ private fun MainContent(
     val flight = container.engine.state.collectAsStateWithLifecycle()
     val headingSource = remember(settings.headingSource) { mutableStateOf(settings.headingSource) }
 
+    var showSensorNotReady by remember { mutableStateOf(false) }
+
     fun setLevel() {
-        val reference = container.engine.latestDeviceOrientation ?: return
+        val reference = container.engine.latestDeviceOrientation
+        if (reference == null) {
+            showSensorNotReady = true
+            return
+        }
         scope.launch { container.calibrationRepository.setAttitudeReference(reference) }
     }
 
@@ -164,7 +184,7 @@ private fun MainContent(
             com.ngg.instruments.ui.diagnostics.DiagnosticsScreen(
                 flight = flight.value,
                 capabilities = container.capabilities,
-                recordings = container.recorder.listRecordings(),
+                recordings = remember(screen, mode.recording) { container.recorder.listRecordings() },
                 isRecording = mode.recording,
                 replayingFile = mode.replayFile,
                 hasLocationPermission = hasLocationPermission,
@@ -174,6 +194,23 @@ private fun MainContent(
                 onBack = { screen = Screen.PANEL },
             )
         }
+    }
+
+    if (showSensorNotReady) {
+        AlertDialog(
+            onDismissRequest = { showSensorNotReady = false },
+            title = { Text("Attitude sensor not ready") },
+            text = {
+                Text(
+                    "No orientation reading has arrived yet. Keep the app open for a moment " +
+                        "with the device mounted, then press SET LEVEL again. If this persists, " +
+                        "check the sensor list in Diagnostics.",
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { showSensorNotReady = false }) { Text("OK") }
+            },
+        )
     }
 
     if (showQnhDialog) {
