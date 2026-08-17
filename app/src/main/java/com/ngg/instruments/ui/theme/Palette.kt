@@ -25,7 +25,7 @@ object Palette {
     val bezelDark = Color(0xFF171A1C)
 
     // Dial faces
-    val faceHighlight = Color(0xFF222527)
+    val faceHighlight = Color(0xFF232628)
     val faceMid = Color(0xFF101213)
     val faceEdge = Color(0xFF070809)
 

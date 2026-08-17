@@ -27,7 +27,8 @@ import kotlin.math.sin
 /**
  * Ground speed in knots from GNSS Doppler speed. 0–900 kt scale: 0 at the
  * lower-left, sweeping 300° clockwise, in the reference's cream ink.
- * When no valid speed exists the needle is hidden — no fabricated movement.
+ * With no valid speed the needle rests at zero; the digital chip on the
+ * panel slot is what reports whether the value is live.
  */
 @Composable
 fun GroundSpeedIndicator(
@@ -52,12 +53,10 @@ fun GroundSpeedIndicator(
             onDrawBehind {
                 drawImage(background)
 
-                if (available.value) {
-                    drawSpeedNeedle(c, dialR, s, groundSpeedKt.value.coerceIn(0f, 900f), alpha = 1f)
-                } else {
-                    // Parked at zero, dimmed, like an unpowered instrument.
-                    drawSpeedNeedle(c, dialR, s, knots = 0f, alpha = PARKED_NEEDLE_ALPHA)
-                }
+                // Always solid, as on the reference panel; with no valid
+                // speed the needle simply rests at zero.
+                val knots = if (available.value) groundSpeedKt.value.coerceIn(0f, 900f) else 0f
+                drawSpeedNeedle(c, dialR, s, knots)
                 drawSpeedHub(c, s)
                 drawGlass(dialR)
             }
@@ -89,10 +88,10 @@ private fun DrawScope.drawSpeedDial(textMeasurer: TextMeasurer, dialR: Float) {
         )
     }
 
-    val numberStyle = TextStyle(fontFamily = BarlowCondensed, color = ink, fontSize = (s * 0.036f).toSp(), fontWeight = FontWeight.Bold)
+    val numberStyle = TextStyle(fontFamily = BarlowCondensed, color = ink, fontSize = (s * 0.038f).toSp(), fontWeight = FontWeight.Bold)
     for (v in 0..900 step 100) {
         val a = Math.toRadians(speedAngleDeg(v.toFloat()).toDouble())
-        val rr = dialR * 0.62f
+        val rr = dialR * 0.64f
         val layout = textMeasurer.measure(AnnotatedString(v.toString()), numberStyle)
         drawText(
             layout,
@@ -129,7 +128,7 @@ private fun DrawScope.drawSpeedDial(textMeasurer: TextMeasurer, dialR: Float) {
     faceDot(dialR * 0.52f, dialR * 0.46f, s * 0.008f)
 }
 
-private fun DrawScope.drawSpeedNeedle(c: Offset, dialR: Float, s: Float, knots: Float, alpha: Float) {
+private fun DrawScope.drawSpeedNeedle(c: Offset, dialR: Float, s: Float, knots: Float) {
     rotate(degrees = speedAngleDeg(knots), pivot = c) {
         // Black rear counterbalance.
         val tail = Path().apply {
@@ -139,7 +138,7 @@ private fun DrawScope.drawSpeedNeedle(c: Offset, dialR: Float, s: Float, knots: 
             lineTo(c.x - dialR * 0.35f, c.y + s * 0.008f)
             close()
         }
-        drawPath(tail, Color(0xFF090B0C), alpha = alpha)
+        drawPath(tail, Color(0xFF090B0C))
 
         // Cream front needle.
         val needle = Path().apply {
@@ -150,7 +149,7 @@ private fun DrawScope.drawSpeedNeedle(c: Offset, dialR: Float, s: Float, knots: 
             lineTo(c.x - s * 0.018f, c.y + s * 0.010f)
             close()
         }
-        drawPath(needle, Palette.needleCream, alpha = alpha)
+        drawPath(needle, Palette.needleCream)
     }
 }
 

@@ -58,18 +58,6 @@ fun HeadingIndicator(
 
             val background = renderStaticLayer {
                 drawHousing(cornerFraction = 0.045f)
-                // Eight face dots around the bezel, from the designed card.
-                for (i in 0 until 8) {
-                    val a = Math.toRadians(i * 45.0 - 90.0)
-                    drawCircle(
-                        color = Color(0xFFD9DDE0),
-                        radius = s * 0.007f,
-                        center = Offset(
-                            c.x + (cos(a) * s * 0.392f).toFloat(),
-                            c.y + (sin(a) * s * 0.392f).toFloat(),
-                        ),
-                    )
-                }
                 drawBezel()
             }
             val card = renderStaticLayer {
@@ -92,11 +80,12 @@ fun HeadingIndicator(
             onDrawBehind {
                 drawImage(background)
 
-                val dimmed = !cardAvailable.value
-
-                // Rotating card: value-up means the card turns opposite.
+                // Rotating card: value-up means the card turns opposite. The
+                // card is always solid, as on the reference panel; when no
+                // value is available it simply holds its last position and the
+                // readout below shows dashes.
                 rotate(degrees = -cardDeg.value, pivot = c) {
-                    drawImage(card, alpha = if (dimmed) 0.45f else 1f)
+                    drawImage(card)
                 }
 
                 drawFixedAircraft(c, dialR, s)
@@ -155,8 +144,8 @@ private fun DrawScope.drawCompassCard(textMeasurer: TextMeasurer, dialR: Float) 
     drawDialFace(dialR)
 
     // White graduation band.
-    val bandOuter = dialR * 0.965f
-    val bandInner = dialR * 0.795f
+    val bandOuter = dialR * 0.87f
+    val bandInner = dialR * 0.71f
     drawCircle(
         color = CardBand,
         radius = (bandOuter + bandInner) / 2f,
@@ -171,8 +160,8 @@ private fun DrawScope.drawCompassCard(textMeasurer: TextMeasurer, dialR: Float) 
     for (deg in 0 until 360 step 5) {
         val major = deg % 30 == 0
         val a = Math.toRadians(deg.toDouble() - 90.0)
-        val inner = dialR * 0.805f
-        val outer = dialR * if (major) 0.955f else 0.93f
+        val inner = dialR * 0.72f
+        val outer = dialR * if (major) 0.86f else 0.83f
         drawLine(
             color = CardInk,
             start = Offset(c.x + (cos(a) * inner).toFloat(), c.y + (sin(a) * inner).toFloat()),
@@ -199,6 +188,8 @@ private fun DrawScope.drawCompassCard(textMeasurer: TextMeasurer, dialR: Float) 
         0 to "N", 30 to "3", 60 to "6", 90 to "E", 120 to "12", 150 to "15",
         180 to "S", 210 to "21", 240 to "24", 270 to "W", 300 to "30", 330 to "33",
     )
+    drawCardMarkers(c, dialR, s)
+
     for ((deg, text) in labels) {
         val style = when {
             text == "N" -> northStyle
@@ -211,9 +202,29 @@ private fun DrawScope.drawCompassCard(textMeasurer: TextMeasurer, dialR: Float) 
                 layout,
                 topLeft = Offset(
                     c.x - layout.size.width / 2f,
-                    c.y - dialR * 0.665f - layout.size.height / 2f,
+                    c.y - dialR * 0.605f - layout.size.height / 2f,
                 ),
             )
+        }
+    }
+}
+
+/** Eight white index triangles on the rotating card, pointing inward. */
+private fun DrawScope.drawCardMarkers(c: Offset, dialR: Float, s: Float) {
+    for (i in 0 until 8) {
+        val deg = i * 45f
+        val a = Math.toRadians(deg.toDouble() - 90.0)
+        val rr = dialR * 0.96f
+        val tx = c.x + (cos(a) * rr).toFloat()
+        val ty = c.y + (sin(a) * rr).toFloat()
+        rotate(degrees = deg, pivot = Offset(tx, ty)) {
+            val tri = Path().apply {
+                moveTo(tx, ty + s * 0.014f)          // apex toward the centre
+                lineTo(tx - s * 0.011f, ty - s * 0.006f)
+                lineTo(tx + s * 0.011f, ty - s * 0.006f)
+                close()
+            }
+            drawPath(tri, Color(0xFFF2F4F5))
         }
     }
 }

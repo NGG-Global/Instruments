@@ -180,6 +180,20 @@ fun DrawScope.drawBezel() {
     )
 }
 
+/**
+ * Deterministic hash used by the reference panel for its dial and paint
+ * textures: fract(sin(n * 12.9898 + 78.233) * 43758.5453).
+ */
+internal fun seededNoise(n: Float): Float {
+    val x = kotlin.math.sin(n * 12.9898f + 78.233f) * 43758.5453f
+    return x - kotlin.math.floor(x)
+}
+
+/**
+ * Dial face exactly as the reference draws it: radial gradient offset up and
+ * to the left, plus 1400 speckles of fine aged texture. The speckles are part
+ * of the cached static layer, so they cost nothing per frame.
+ */
 fun DrawScope.drawDialFace(radius: Float) {
     val s = instrumentSizePx()
     val c = center
@@ -191,11 +205,27 @@ fun DrawScope.drawDialFace(radius: Float) {
                 1f to Palette.faceEdge,
             ),
             center = Offset(c.x - s * 0.05f, c.y - s * 0.07f),
-            radius = radius * 1.6f,
+            radius = radius,
         ),
         radius = radius,
         center = c,
     )
+    // Aged dial texture (reference: 1400 sub-pixel specks inside the face).
+    val dot = s * 0.0011f
+    for (i in 0 until 1400) {
+        val a = seededNoise(i * 7.1f) * (2f * Math.PI.toFloat())
+        val rr = kotlin.math.sqrt(seededNoise(i * 3.4f)) * radius
+        val alpha = 0.007f + seededNoise(i * 5.8f) * 0.016f
+        drawRect(
+            color = if (seededNoise(i * 9.2f) > 0.5f) {
+                Color.White.copy(alpha = alpha)
+            } else {
+                Color.Black.copy(alpha = alpha)
+            },
+            topLeft = Offset(c.x + kotlin.math.cos(a) * rr, c.y + kotlin.math.sin(a) * rr),
+            size = androidx.compose.ui.geometry.Size(dot, dot),
+        )
+    }
 }
 
 /** Diagonal glass reflection over a circular dial. */

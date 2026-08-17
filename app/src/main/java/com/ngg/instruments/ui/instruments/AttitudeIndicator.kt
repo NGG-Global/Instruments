@@ -111,8 +111,10 @@ fun AttitudeIndicator(
                 val isAvailable = available.value
 
                 drawHorizonBall(c, ballR, s, pitch, roll, clipCircle, ladder10, ladder20)
-                drawBankScale(c, ballR, s, roll)
+                drawBankScale(c, ballR, s)
+                drawBankMarkers(c, ballR, s)
                 drawAircraftSymbol(c, s)
+                drawBottomMarkers(c, s)
 
                 // Numeric pitch readout: on the housing below the ball
                 // (outside ballR, unaffected by the glass), hidden entirely
@@ -337,7 +339,7 @@ private fun DrawScope.drawHorizonBall(
     }
 }
 
-private fun DrawScope.drawBankScale(c: Offset, ballR: Float, s: Float, rollDeg: Float) {
+private fun DrawScope.drawBankScale(c: Offset, ballR: Float, s: Float) {
     val r = ballR * 1.02f
 
     // Fixed white bank ticks across the top arc.
@@ -363,16 +365,60 @@ private fun DrawScope.drawBankScale(c: Offset, ballR: Float, s: Float, rollDeg: 
     }
     drawPath(topTri, Color.White)
 
-    // Sky pointer: rotates with roll (bank cue), like a real sky pointer.
-    rotate(degrees = -rollDeg, pivot = c) {
-        val cue = Path().apply {
-            moveTo(c.x, c.y - r * 0.84f)
-            lineTo(c.x - s * 0.020f, c.y - r * 0.78f)
-            lineTo(c.x + s * 0.020f, c.y - r * 0.78f)
-            close()
-        }
-        drawPath(cue, Palette.referenceOrange, style = Stroke(width = s * 0.006f))
+    // Inner orange cue triangle — fixed on the reference panel, not rolling.
+    val cue = Path().apply {
+        moveTo(c.x, c.y - r * 0.84f)
+        lineTo(c.x - s * 0.020f, c.y - r * 0.78f)
+        lineTo(c.x + s * 0.020f, c.y - r * 0.78f)
+        close()
     }
+    drawPath(cue, Palette.referenceOrange, style = Stroke(width = s * 0.006f))
+}
+
+/** Four white triangular bank markers at ±20° and ±45°, as on the reference. */
+private fun DrawScope.drawBankMarkers(c: Offset, ballR: Float, s: Float) {
+    val r = ballR * 1.02f
+    for (deg in intArrayOf(-45, -20, 20, 45)) {
+        val a = Math.toRadians(deg.toDouble())
+        val rr = r * 0.93f
+        val tx = c.x + (sin(a) * rr).toFloat()
+        val ty = c.y - (cos(a) * rr).toFloat()
+        rotate(degrees = deg.toFloat(), pivot = Offset(tx, ty)) {
+            val tri = Path().apply {
+                moveTo(tx, ty - s * 0.010f)
+                lineTo(tx - s * 0.012f, ty + s * 0.010f)
+                lineTo(tx + s * 0.012f, ty + s * 0.010f)
+                close()
+            }
+            drawPath(tri, Color(0xFFF3F5F6))
+        }
+    }
+}
+
+/** White index marks along the bottom of the case, from the reference. */
+private fun DrawScope.drawBottomMarkers(c: Offset, s: Float) {
+    val yy = c.y + s * 0.3344f       // bodyY + bodyH * 0.88
+    val bw = s * 0.035f
+    val bh = s * 0.012f
+    val left = Path().apply {
+        moveTo(c.x - bw * 2.6f, yy)
+        lineTo(c.x - bw * 1.7f, yy - bh)
+        lineTo(c.x - bw * 0.8f, yy)
+        close()
+    }
+    drawPath(left, Color.White)
+    drawRect(
+        color = Color.White,
+        topLeft = Offset(c.x - bw * 0.35f, yy - bh * 1.8f),
+        size = androidx.compose.ui.geometry.Size(bw * 0.7f, bh * 2.2f),
+    )
+    val right = Path().apply {
+        moveTo(c.x + bw * 0.8f, yy)
+        lineTo(c.x + bw * 1.7f, yy - bh)
+        lineTo(c.x + bw * 2.6f, yy)
+        close()
+    }
+    drawPath(right, Color.White)
 }
 
 private fun DrawScope.drawAircraftSymbol(c: Offset, s: Float) {
