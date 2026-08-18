@@ -1,0 +1,3451 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Aircraft Dials — Smartphone Panel</title>
+<style>
+*{box-sizing:border-box}
+html,body{
+  margin:0;
+  width:100%;
+  min-height:100%;
+  background:#030405;
+  font-family:Arial,Helvetica,sans-serif;
+  overscroll-behavior:none;
+}
+body{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:10px;
+}
+.phone{
+  position:relative;
+  width:min(94vw,430px);
+  aspect-ratio:390/844;
+  max-height:96vh;
+  padding:12px 7px 9px;
+  border:2px solid #2d3235;
+  border-radius:36px;
+  overflow:hidden;
+  background:
+    linear-gradient(180deg,#131719 0%,#080a0b 100%);
+  box-shadow:
+    0 30px 70px rgba(0,0,0,.72),
+    inset 0 0 0 1px rgba(255,255,255,.035);
+}
+.status-strip{
+  position:absolute;
+  z-index:200;
+  top:max(3px,env(safe-area-inset-top));
+  left:6px;
+  right:6px;
+  height:25px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  pointer-events:none;
+  font-family:'Lucida Console','Courier New',monospace;
+}
+.gps-status{
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  padding:3px 7px;
+  border:1px solid currentColor;
+  border-radius:4px;
+  background:rgba(2,4,4,.78);
+  font-size:10px;
+  line-height:1;
+  font-weight:700;
+  letter-spacing:.7px;
+  text-shadow:0 0 5px currentColor;
+}
+.gps-status::before{
+  content:'';
+  width:6px;
+  height:6px;
+  border-radius:50%;
+  background:currentColor;
+  box-shadow:0 0 5px currentColor;
+}
+.gps-status.ok{color:#54f06d;}
+.gps-status.bad{color:#ff5353;}
+.reset-view-btn{
+  pointer-events:auto;
+  appearance:none;
+  -webkit-appearance:none;
+  border:1px solid rgba(190,246,201,.60);
+  border-radius:4px;
+  background:rgba(2,5,4,.82);
+  color:#98f69c;
+  padding:4px 8px;
+  min-height:23px;
+  font:700 9px/1 'Lucida Console','Courier New',monospace;
+  letter-spacing:.55px;
+  touch-action:manipulation;
+  user-select:none;
+  -webkit-user-select:none;
+}
+.reset-view-btn:active{
+  background:rgba(32,78,39,.72);
+}
+.topbar{
+  /* Keep the upper part of the phone completely free for a future taller NAV display. */
+  display:none;
+}
+.speaker{display:none;}
+.panel{
+  height:100%;
+  position:relative;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  grid-template-rows:auto auto;
+  gap:0;
+  align-content:end;
+}
+.slot{
+  min-width:0;
+  min-height:0;
+  position:relative;
+  overflow:hidden;
+  aspect-ratio:1/1;
+  border-radius:5px;
+  border:1px solid #202427;
+  background:#070809;
+  box-shadow:inset 0 0 12px rgba(0,0,0,.72);
+}
+/* The attitude and NAV panels are true floating windows.  Their geometry is
+   managed by the pointer-control script and persisted in localStorage. */
+.slot.attitude,
+.slot.nav-slot{
+  position:absolute;
+  z-index:30;
+  margin:0;
+  touch-action:none;
+}
+.slot.attitude{
+  width:50%;
+  height:auto;
+  aspect-ratio:1/1;
+}
+.slot.nav-slot{
+  width:50%;
+  height:190px;
+  aspect-ratio:auto;
+  padding:5px;
+  background:#050607;
+}
+.fixed-instrument{
+  z-index:1;
+}
+.float-drag-handle{
+  position:absolute;
+  z-index:70;
+  left:50%;
+  top:1px;
+  transform:translateX(-50%);
+  width:76px;
+  height:24px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:0 0 7px 7px;
+  background:rgba(4,6,7,.68);
+  border:1px solid rgba(230,235,232,.20);
+  color:rgba(230,235,232,.72);
+  font:700 14px/1 Arial,sans-serif;
+  letter-spacing:2px;
+  user-select:none;
+  -webkit-user-select:none;
+  -webkit-touch-callout:none;
+  touch-action:none;
+  pointer-events:auto;
+  cursor:move;
+}
+.float-drag-handle::after{content:'···';}
+.resize-handle-square{
+  position:absolute;
+  z-index:75;
+  right:1px;
+  bottom:1px;
+  width:34px;
+  height:34px;
+  touch-action:none;
+  cursor:nwse-resize;
+}
+.resize-handle-square::after{
+  content:'';
+  position:absolute;
+  right:4px;
+  bottom:4px;
+  width:10px;
+  height:10px;
+  border-right:2px solid rgba(235,239,235,.58);
+  border-bottom:2px solid rgba(235,239,235,.58);
+}
+.resize-handle-y{
+  position:absolute;
+  z-index:75;
+  left:50%;
+  bottom:0;
+  transform:translateX(-50%);
+  width:86px;
+  height:28px;
+  touch-action:none;
+  cursor:ns-resize;
+}
+.resize-handle-y::after{
+  content:'';
+  position:absolute;
+  left:10px;
+  right:10px;
+  bottom:4px;
+  border-bottom:2px solid rgba(235,239,235,.58);
+}
+.nav-computer{
+  width:100%;
+  height:100%;
+  border:1px solid #202427;
+  border-radius:4px;
+  background:#050708;
+  box-shadow:inset 0 0 14px rgba(0,0,0,.8);
+  padding:7px 8px 6px;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+.nav-top{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:10px;
+}
+.nav-entry{
+  flex:1 1 0;
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+}
+.nav-entry.right{
+  align-items:flex-end;
+  text-align:right;
+}
+.nav-entry label{
+  font-size:6px;
+  line-height:1;
+  letter-spacing:.8px;
+  color:#dbe6dc;
+  font-weight:700;
+}
+.nav-entry input{
+  width:100%;
+  max-width:74px;
+  height:14px;
+  padding:0;
+  border:0;
+  outline:none;
+  background:transparent;
+  color:#98f69c;
+  font-family:'Lucida Console','Courier New',monospace;
+  font-size:12px;
+  line-height:1;
+  font-weight:700;
+  letter-spacing:1px;
+  text-transform:uppercase;
+  caret-color:#98f69c;
+}
+.nav-entry.left input{ text-align:left; }
+.nav-entry.right input{ text-align:right; }
+.nav-entry input::placeholder{
+  color:rgba(152,246,156,.33);
+}
+.nav-separator{
+  margin-top:2px;
+  border-top:2px dotted rgba(215,220,217,.9);
+  opacity:.92;
+}
+.nav-waypoints{
+  flex:1 1 auto;
+  min-height:0;
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+  padding-top:1px;
+  font-family:'Lucida Console','Courier New',monospace;
+  color:#98f69c;
+}
+.nav-wpt-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  font-size:10px;
+  line-height:1.1;
+  letter-spacing:.9px;
+  white-space:nowrap;
+}
+.nav-wpt-index{
+  color:rgba(219,230,220,.6);
+  min-width:10px;
+}
+.nav-wpt-name{
+  flex:1 1 auto;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.nav-wpt-bearing{
+  flex:0 0 auto;
+  min-width:36px;
+  text-align:right;
+  color:#98f69c;
+  font-size:9px;
+  letter-spacing:.3px;
+}
+.nav-wpt-distance{
+  flex:0 0 auto;
+  min-width:46px;
+  text-align:right;
+  color:#98f69c;
+  font-size:9px;
+  letter-spacing:.3px;
+}
+.nav-wpt-row.nav-active{
+  background:rgba(90,255,120,.08);
+}
+.nav-wpt-row.nav-active .nav-wpt-name,
+.nav-wpt-row.nav-active .nav-wpt-bearing{
+  color:#c2ffbf;
+  text-shadow:0 0 4px rgba(116,255,126,.45);
+}
+.nav-empty{
+  color:rgba(152,246,156,.48);
+}
+.nav-credit{
+  flex:0 0 auto;
+  margin-top:1px;
+  padding-top:2px;
+  border-top:1px solid rgba(215,220,217,.16);
+  color:rgba(219,230,220,.43);
+  font-family:'Lucida Console','Courier New',monospace;
+  font-size:5px;
+  line-height:1.15;
+  letter-spacing:.25px;
+  text-align:center;
+  white-space:nowrap;
+}
+.nav-credit a{
+  color:rgba(152,246,156,.54);
+  text-decoration:none;
+}
+.slot canvas{
+  width:100%;
+  height:100%;
+  display:block;
+}
+/* The original dial artwork leaves a generous internal margin.  A small scale-up
+   makes adjacent instrument bezels sit much closer without changing the artwork. */
+.slot:not(.nav-slot) canvas{
+  transform:scale(1.065);
+  transform-origin:center center;
+}
+.caption{
+  display:none;
+  position:absolute;
+  z-index:5;
+  left:5px;
+  bottom:4px;
+  color:rgba(238,239,235,.48);
+  font-size:7px;
+  line-height:1;
+  letter-spacing:.65px;
+  pointer-events:none;
+  text-shadow:0 1px 2px #000;
+}
+.hidden-ui{
+  position:absolute!important;
+  width:1px!important;
+  height:1px!important;
+  overflow:hidden!important;
+  clip-path:inset(50%)!important;
+  white-space:nowrap!important;
+  opacity:0!important;
+  pointer-events:none!important;
+}
+.sensor-hint{
+  position:absolute;
+  z-index:20;
+  right:8px;
+  top:8px;
+  font-size:7px;
+  color:rgba(255,255,255,.32);
+  pointer-events:none;
+  letter-spacing:.4px;
+}
+@media(max-width:480px){
+  body{padding:0}
+  .phone{
+    width:100vw;
+    height:100dvh;
+    max-height:none;
+    aspect-ratio:auto;
+    border:0;
+    border-radius:0;
+    padding:max(3px,env(safe-area-inset-top)) 2px max(3px,env(safe-area-inset-bottom));
+  }
+}
+</style>
+</head>
+<body>
+<div class="phone" id="phonePanel">
+  <div class="status-strip" aria-label="GPS status and view controls">
+    <div id="gpsStatus" class="gps-status bad" aria-live="polite">GPS</div>
+    <button id="resetViewBtn" class="reset-view-btn" type="button">RESET VIEW</button>
+  </div>
+  <div class="topbar"><div class="speaker"></div></div>
+  <div class="panel">
+    <div class="slot attitude" id="attitudeWindow">
+      <canvas id="attCanvas"></canvas>
+      <div class="float-drag-handle" id="attitudeDragHandle" aria-label="Move artificial horizon"></div>
+      <div class="resize-handle-square" id="attitudeResizeHandle" aria-label="Resize artificial horizon"></div>
+    </div>
+    <div class="slot nav-slot" id="navWindow">
+      <div class="nav-computer" aria-label="Cockpit navigation computer">
+        <div class="nav-top">
+          <div class="nav-entry left">
+            <label for="navOrigin">ORIGIN</label>
+            <input id="navOrigin" type="text" inputmode="text" maxlength="4" value="PVK" placeholder="---" autocomplete="off" autocapitalize="characters" spellcheck="false">
+          </div>
+          <div class="nav-entry right">
+            <label for="navDestination">DESTINATION</label>
+            <input id="navDestination" type="text" inputmode="text" maxlength="4" value="ATH" placeholder="---" autocomplete="off" autocapitalize="characters" spellcheck="false">
+          </div>
+        </div>
+        <div class="nav-separator" aria-hidden="true"></div>
+        <div id="navWaypointList" class="nav-waypoints"></div>
+        <div id="navCredit" class="nav-credit">ONLINE: <a href="https://flightplandatabase.com/">FLIGHT PLAN DATABASE</a> · SIM ONLY</div>
+      </div>
+      <div class="float-drag-handle" id="navDragHandle" aria-label="Move navigation window"></div>
+      <div class="resize-handle-y" id="navResizeHandle" aria-label="Resize navigation window vertically"></div>
+    </div>
+    <div class="slot fixed-instrument">
+      <canvas id="headingCanvas"></canvas>
+    </div>
+    <div class="slot fixed-instrument">
+      <canvas id="altCanvas"></canvas>
+    </div>
+    <div class="slot fixed-instrument">
+      <canvas id="vsiCanvas"></canvas>
+    </div>
+    <div class="slot fixed-instrument">
+      <canvas id="speedCanvas"></canvas>
+    </div>
+  </div>
+
+  <!-- Required by the original standalone scripts, but kept off the instrument faces. -->
+  <button id="headingPermBtn" class="hidden-ui">Enable compass</button>
+  <div id="headingReadout" class="hidden-ui"></div>
+  <button id="altGpsBtn" class="hidden-ui">Enable GPS altitude</button>
+  <div id="altReadout" class="hidden-ui"></div>
+  <div id="speedStatus" class="hidden-ui"></div>
+</div>
+
+<script>
+(function(){
+
+const canvas = document.getElementById('attCanvas');
+
+const state = {
+  pitch: 0,
+  roll: 0,
+  nativeActive: false
+};
+
+window.setAttitude = function(pitchDeg, rollDeg){
+  if (Number.isFinite(pitchDeg)) state.pitch = pitchDeg;
+  if (Number.isFinite(rollDeg)) state.roll = rollDeg;
+  state.nativeActive = true;
+};
+
+// Offscreen texture for the ball
+const texCanvas = document.createElement('canvas');
+const TEX = 320;
+texCanvas.width = TEX;
+texCanvas.height = TEX;
+const texCtx = texCanvas.getContext('2d');
+const imgData = texCtx.createImageData(TEX, TEX);
+const px = imgData.data;
+
+function fitCanvas(c){
+  const rect = c.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  const w = Math.max(1, Math.round(rect.width * dpr));
+  const h = Math.max(1, Math.round(rect.height * dpr));
+  if (c.width !== w || c.height !== h){
+    c.width = w; c.height = h;
+  }
+  return {ctx:c.getContext('2d'), w, h};
+}
+
+function roundedRect(ctx,x,y,w,h,r){
+  r = Math.min(r,w/2,h/2);
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);
+  ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath();
+}
+
+function drawScrew(ctx, cx, cy, r){
+  const g = ctx.createRadialGradient(cx-r*0.3, cy-r*0.35, r*0.08, cx, cy, r);
+  g.addColorStop(0, '#8d9499');
+  g.addColorStop(0.4, '#596066');
+  g.addColorStop(1, '#202529');
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI*2);
+  ctx.fillStyle = g;
+  ctx.fill();
+  ctx.strokeStyle = '#11161b';
+  ctx.lineWidth = r*0.16;
+  ctx.stroke();
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(-0.65);
+  ctx.strokeStyle = '#535b63';
+  ctx.lineWidth = r*0.18;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(-r*0.52,0);
+  ctx.lineTo(r*0.52,0);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawTrunnion(ctx, cx, cy, r){
+  const g = ctx.createRadialGradient(cx-r*0.25, cy-r*0.25, r*0.12, cx, cy, r);
+  g.addColorStop(0, '#6c747a');
+  g.addColorStop(0.42, '#3c4348');
+  g.addColorStop(1, '#161b1f');
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI*2);
+  ctx.fillStyle = g;
+  ctx.fill();
+  ctx.strokeStyle = '#0b0e10';
+  ctx.lineWidth = r*0.18;
+  ctx.stroke();
+}
+
+function drawBankScale(ctx, cx, cy, r, size){
+  ctx.save();
+  ctx.translate(cx, cy);
+
+  // white bank ticks across the top arc
+  ctx.strokeStyle = '#f3f5f6';
+  ctx.lineWidth = size*0.0042;
+  const marks = [-60,-45,-30,-20,-10,10,20,30,45,60];
+  marks.forEach(d => {
+    const a = d * Math.PI / 180;
+    const major = Math.abs(d) === 30 || Math.abs(d) === 60;
+    const inner = r * (major ? 0.84 : 0.88);
+    const outer = r * 0.98;
+    const x1 = Math.sin(a) * inner;
+    const y1 = -Math.cos(a) * inner;
+    const x2 = Math.sin(a) * outer;
+    const y2 = -Math.cos(a) * outer;
+    ctx.beginPath();
+    ctx.moveTo(x1,y1);
+    ctx.lineTo(x2,y2);
+    ctx.stroke();
+  });
+
+  // side white triangular markers
+  [-45, -20, 20, 45].forEach((d) => {
+    const a = d * Math.PI / 180;
+    const rr = r * 0.93;
+    const tx = Math.sin(a) * rr;
+    const ty = -Math.cos(a) * rr;
+    ctx.save();
+    ctx.translate(tx, ty);
+    ctx.rotate(a);
+    ctx.fillStyle = '#f3f5f6';
+    ctx.beginPath();
+    ctx.moveTo(0, -size*0.010);
+    ctx.lineTo(-size*0.012, size*0.010);
+    ctx.lineTo(size*0.012, size*0.010);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  });
+
+  // top white reference triangle
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  ctx.moveTo(0, -r*1.03);
+  ctx.lineTo(-size*0.020, -r*0.90);
+  ctx.lineTo(size*0.020, -r*0.90);
+  ctx.closePath();
+  ctx.fill();
+
+  // inner orange cue triangle
+  ctx.strokeStyle = '#f39a1e';
+  ctx.lineWidth = size*0.006;
+  ctx.beginPath();
+  ctx.moveTo(0, -r*0.84);
+  ctx.lineTo(-size*0.020, -r*0.78);
+  ctx.lineTo(size*0.020, -r*0.78);
+  ctx.closePath();
+  ctx.stroke();
+
+  ctx.restore();
+}
+function drawAircraftSymbol(ctx, cx, cy, size){
+  ctx.save();
+
+  // orange horizon reference bar
+  ctx.strokeStyle = '#f39a1e';
+  ctx.lineWidth = size*0.010;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(cx - size*0.17, cy);
+  ctx.lineTo(cx - size*0.042, cy);
+  ctx.moveTo(cx + size*0.042, cy);
+  ctx.lineTo(cx + size*0.17, cy);
+  ctx.stroke();
+
+  // dark center airplane / reference shape
+  ctx.strokeStyle = '#1a1c1e';
+  ctx.lineWidth = size*0.007;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(cx - size*0.030, cy);
+  ctx.lineTo(cx - size*0.012, cy);
+  ctx.lineTo(cx, cy + size*0.010);
+  ctx.lineTo(cx + size*0.012, cy);
+  ctx.lineTo(cx + size*0.030, cy);
+  ctx.moveTo(cx, cy - size*0.008);
+  ctx.lineTo(cx, cy + size*0.040);
+  ctx.stroke();
+
+  ctx.restore();
+}
+function drawBottomMarkers(ctx, cx, bodyY, bodyH, size){
+  ctx.save();
+  ctx.fillStyle = '#ffffff';
+  const yy = bodyY + bodyH*0.88;
+  const bw = size*0.035;
+  const bh = size*0.012;
+
+  ctx.beginPath();
+  ctx.moveTo(cx - bw*2.6, yy);
+  ctx.lineTo(cx - bw*1.7, yy - bh);
+  ctx.lineTo(cx - bw*0.8, yy);
+  ctx.closePath();
+  ctx.fill();
+
+  const squareTopY = yy - bh*1.8;
+  const squareH = bh*2.2;
+  ctx.fillRect(cx - bw*0.35, squareTopY, bw*0.7, squareH);
+
+  ctx.beginPath();
+  ctx.moveTo(cx + bw*0.8, yy);
+  ctx.lineTo(cx + bw*1.7, yy - bh);
+  ctx.lineTo(cx + bw*2.6, yy);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+
+  return { squareBottomY: squareTopY + squareH };
+}
+
+// Render a true-looking spherical attitude ball by shading each pixel
+// Render a spherical attitude ball with graphics inspired by the new reference dial
+function renderBallTexture(pitchDeg, rollDeg){
+  const r = TEX * 0.5;
+  const cx = TEX * 0.5;
+  const cy = TEX * 0.5;
+
+  const roll = rollDeg * Math.PI / 180;
+  const pitch = pitchDeg * Math.PI / 180;
+
+  const cr = Math.cos(-roll), sr = Math.sin(-roll);
+  const cp = Math.cos(-pitch), sp = Math.sin(-pitch);
+
+  function rotateToBallLocal(x,y,z){
+    let x1 = x*cr - y*sr;
+    let y1 = x*sr + y*cr;
+    let z1 = z;
+    let x2 = x1;
+    let y2 = y1*cp - z1*sp;
+    let z2 = y1*sp + z1*cp;
+    return [x2,y2,z2];
+  }
+
+  // Ball-local point -> visible projected point on the displayed sphere.
+  // This is the exact inverse of rotateToBallLocal(), so labels and lines
+  // now move together in the same direction.
+  function projectBallPoint(lon, lat){
+    // local coordinates on unit sphere
+    const x = Math.sin(lon) * Math.cos(lat);
+    const y = Math.sin(lat);
+    const z = Math.cos(lon) * Math.cos(lat);
+
+    // Forward pitch rotation: Rx(+pitch)
+    const xp = x;
+    const yp = y*Math.cos(pitch) - z*Math.sin(pitch);
+    const zp = y*Math.sin(pitch) + z*Math.cos(pitch);
+
+    // Forward roll rotation: Rz(+roll)
+    const xv = xp*Math.cos(roll) - yp*Math.sin(roll);
+    const yv = xp*Math.sin(roll) + yp*Math.cos(roll);
+    const zv = zp;
+
+    return {x: cx + xv*r, y: cy + yv*r, z: zv};
+  }
+
+  function skyColor(t){
+    const top = [145, 198, 242];
+    const mid = [88, 150, 212];
+    const bot = [58, 110, 174];
+    if (t < 0.5){
+      const u = t/0.5;
+      return [
+        top[0] + (mid[0]-top[0])*u,
+        top[1] + (mid[1]-top[1])*u,
+        top[2] + (mid[2]-top[2])*u
+      ];
+    }
+    const u = (t-0.5)/0.5;
+    return [
+      mid[0] + (bot[0]-mid[0])*u,
+      mid[1] + (bot[1]-mid[1])*u,
+      mid[2] + (bot[2]-mid[2])*u
+    ];
+  }
+
+  function groundColor(t){
+    const top = [113, 74, 42];
+    const mid = [86, 54, 28];
+    const bot = [45, 28, 14];
+    if (t < 0.5){
+      const u = t/0.5;
+      return [
+        top[0] + (mid[0]-top[0])*u,
+        top[1] + (mid[1]-top[1])*u,
+        top[2] + (mid[2]-top[2])*u
+      ];
+    }
+    const u = (t-0.5)/0.5;
+    return [
+      mid[0] + (bot[0]-mid[0])*u,
+      mid[1] + (bot[1]-mid[1])*u,
+      mid[2] + (bot[2]-mid[2])*u
+    ];
+  }
+
+  function onPitchLine(elev, lon, deg){
+    const lat = deg * Math.PI / 180;
+    const major = deg % 10 === 0;
+    const lineHalf = (major ? 0.62 : 0.42);
+    const gap = 0.11;
+    const thick = major ? 0.008 : 0.006;
+    if (Math.abs(elev - lat) < thick){
+      const a = Math.abs(lon);
+      if (a > gap && a < lineHalf) return true;
+    }
+    return false;
+  }
+
+  function onCenterShortBar(elev, lon){
+    return Math.abs(elev) < 0.010 && Math.abs(lon) < 0.10;
+  }
+
+  const light = [-0.40, -0.52, 0.82];
+
+  for(let y=0; y<TEX; y++){
+    for(let x=0; x<TEX; x++){
+      const idx = (y*TEX + x) * 4;
+      const nx = (x + 0.5 - cx) / r;
+      const ny = (y + 0.5 - cy) / r;
+      const rr = nx*nx + ny*ny;
+
+      if (rr > 1){
+        px[idx+0]=0; px[idx+1]=0; px[idx+2]=0; px[idx+3]=0;
+        continue;
+      }
+
+      const nz = Math.sqrt(1 - rr);
+      const p = rotateToBallLocal(nx, ny, nz);
+      const bx = p[0], by = p[1], bz = p[2];
+      const elev = Math.asin(by);
+      const lon = Math.atan2(bx, bz);
+
+      let col;
+      // Color convention: blue is up, brown is down
+      if (by >= 0){
+        const t = Math.min(1, Math.max(0, (1 - by) * 0.85));
+        col = groundColor(t);
+      } else {
+        const t = Math.min(1, Math.max(0, (-by) * 1.10));
+        col = skyColor(t);
+      }
+
+      // orange horizon
+      if (Math.abs(by) < 0.010){
+        col = [243, 154, 30];
+      }
+
+      // white pitch ladder lines
+      for (let d=-20; d<=20; d+=5){
+        if (d !== 0 && onPitchLine(elev, lon, d)){
+          col = [240,243,245];
+        }
+      }
+
+      // short center orange horizon segment
+      if (onCenterShortBar(elev, lon)){
+        col = [243, 154, 30];
+      }
+
+      // white center vertical pitch scale
+      if (Math.abs(bx) < 0.008 && Math.abs(by) < 0.36){
+        col = [240,243,245];
+      }
+
+      // center small dark hub
+      if (Math.abs(bx) < 0.025 && Math.abs(by) < 0.025){
+        col = [40, 34, 26];
+      }
+
+      // spherical shading
+      let shade = 0.68 + 0.32*(nx*light[0] + ny*light[1] + nz*light[2]);
+      shade *= (0.90 + 0.10*nz);
+      shade = Math.max(0.20, Math.min(1.12, shade));
+
+      const spec = Math.pow(Math.max(0, nx*(-0.16) + ny*(-0.30) + nz*(0.94)), 18) * 0.22;
+
+      px[idx+0] = Math.max(0, Math.min(255, col[0]*shade + 255*spec));
+      px[idx+1] = Math.max(0, Math.min(255, col[1]*shade + 255*spec));
+      px[idx+2] = Math.max(0, Math.min(255, col[2]*shade + 255*spec));
+      px[idx+3] = 255;
+    }
+  }
+
+  texCtx.putImageData(imgData, 0, 0);
+
+  // Draw pitch numbers ON the ball texture so they move with the ladder lines
+  texCtx.save();
+  texCtx.fillStyle = '#f1f4f5';
+  texCtx.font = `bold ${Math.round(TEX*0.062)}px Arial`;
+  texCtx.textBaseline = 'middle';
+
+  function drawMovingPair(text, deg, lonMag){
+    const lat = deg * Math.PI / 180;
+    const eps = 0.018;
+
+    function drawOne(lon, align, offsetSign){
+      const p = projectBallPoint(lon, lat);
+      if (p.z <= 0.02) return;
+
+      // Find the local tangent of the same pitch line after projection.
+      // The number therefore rolls exactly with its corresponding line.
+      const p1 = projectBallPoint(lon - eps, lat);
+      const p2 = projectBallPoint(lon + eps, lat);
+      const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
+
+      texCtx.save();
+      texCtx.translate(p.x, p.y);
+      texCtx.rotate(angle);
+      texCtx.textAlign = align;
+      texCtx.fillText(text, offsetSign * TEX*0.014, 0);
+      texCtx.restore();
+    }
+
+    drawOne(-lonMag, 'right', -1);
+    drawOne( lonMag, 'left',   1);
+  }
+
+  // Same pitch values as the major pitch lines
+  drawMovingPair('20',  20, 0.46);
+  drawMovingPair('10',  10, 0.39);
+  drawMovingPair('10', -10, 0.39);
+  drawMovingPair('20', -20, 0.46);
+
+  texCtx.restore();
+}
+function ringPath(ctx, cx, cy, outerR, innerR){
+  ctx.beginPath();
+  ctx.arc(cx, cy, outerR, 0, Math.PI*2);
+  ctx.arc(cx, cy, innerR, 0, Math.PI*2, true);
+  ctx.closePath();
+}
+
+function drawBrushedUsedRing(ctx, cx, cy, outerR, innerR, baseCols){
+  // Base anodized dark-gray aluminum
+  const g = ctx.createLinearGradient(cx-outerR, cy-outerR, cx+outerR, cy+outerR);
+  g.addColorStop(0, baseCols[0]);
+  g.addColorStop(0.18, baseCols[1]);
+  g.addColorStop(0.50, baseCols[2]);
+  g.addColorStop(0.82, baseCols[3]);
+  g.addColorStop(1, baseCols[4]);
+
+  ctx.save();
+  ringPath(ctx, cx, cy, outerR, innerR);
+  ctx.fillStyle = g;
+  ctx.fill('evenodd');
+
+  // Brushed aluminum streaks
+  ctx.clip('evenodd');
+  for(let i=0; i<160; i++){
+    const t = i / 160;
+    const ang = -0.85 + t * 1.75;
+    const r1 = innerR + (outerR-innerR) * (0.10 + 0.75 * ((i*37)%97)/96);
+    const len = (outerR-innerR) * (0.42 + 0.28 * ((i*19)%31)/30);
+    const x1 = cx + Math.cos(ang) * r1;
+    const y1 = cy + Math.sin(ang) * r1;
+    const x2 = cx + Math.cos(ang) * (r1 + len);
+    const y2 = cy + Math.sin(ang) * (r1 + len);
+
+    const alpha = 0.018 + (((i*13)%11)/10) * 0.020;
+    ctx.strokeStyle = `rgba(255,255,255,${alpha.toFixed(3)})`;
+    ctx.lineWidth = 0.8 + (((i*11)%9)/8) * 0.9;
+    ctx.beginPath();
+    ctx.moveTo(x1,y1);
+    ctx.lineTo(x2,y2);
+    ctx.stroke();
+  }
+
+  // Slightly polished edge highlights
+  ctx.strokeStyle = 'rgba(255,255,255,0.17)';
+  ctx.lineWidth = Math.max(1, (outerR-innerR) * 0.11);
+  ctx.beginPath();
+  ctx.arc(cx, cy, outerR - (outerR-innerR)*0.22, -2.35, -1.18);
+  ctx.stroke();
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.09)';
+  ctx.lineWidth = Math.max(1, (outerR-innerR) * 0.07);
+  ctx.beginPath();
+  ctx.arc(cx, cy, innerR + (outerR-innerR)*0.40, 0.55, 1.55);
+  ctx.stroke();
+
+  // Slightly worn darker patches
+  ctx.strokeStyle = 'rgba(0,0,0,0.14)';
+  ctx.lineWidth = Math.max(1, (outerR-innerR) * 0.12);
+  ctx.beginPath();
+  ctx.arc(cx, cy, outerR - (outerR-innerR)*0.35, 1.85, 2.85);
+  ctx.stroke();
+
+  // Fine scuffs: used but not old
+  for(let i=0; i<18; i++){
+    const a = -2.2 + i*0.24;
+    const rr = innerR + (outerR-innerR) * (0.48 + 0.18 * Math.sin(i*1.7));
+    const span = 0.035 + (i % 3) * 0.01;
+    ctx.strokeStyle = i % 4 === 0 ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.11)';
+    ctx.lineWidth = 0.8 + (i % 3) * 0.5;
+    ctx.beginPath();
+    ctx.arc(cx, cy, rr, a, a + span);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
+
+function seededNoise(n){
+  const x = Math.sin(n * 12.9898 + 78.233) * 43758.5453;
+  return x - Math.floor(x);
+}
+
+
+function drawDialNumbers(ctx, cx, cy, size){
+  ctx.save();
+  ctx.fillStyle = '#f1f4f5';
+  ctx.font = `bold ${Math.round(size*0.032)}px Arial`;
+  ctx.textBaseline = 'middle';
+
+  function drawPair(txt, y, xoff){
+    // left number sits just outside the left pitch line
+    ctx.textAlign = 'right';
+    ctx.fillText(txt, cx - xoff, y);
+
+    // right number sits just outside the right pitch line
+    ctx.textAlign = 'left';
+    ctx.fillText(txt, cx + xoff, y);
+  }
+
+  // numbers aligned to the same vertical levels as the pitch bars
+  drawPair('20', cy - size*0.145, size*0.070);
+  drawPair('10', cy - size*0.072, size*0.058);
+  drawPair('10', cy + size*0.075, size*0.058);
+  drawPair('20', cy + size*0.145, size*0.070);
+
+  ctx.restore();
+}
+
+function drawMatteAircraftBezel(ctx, cx, cy, size, bodyX, bodyY, bodyW, bodyH, bezelR){
+  // Based on the new reference: black painted / enamel-style instrument bezel,
+  // satin black, slightly pebbled/cast, lightly used, not metallic gray.
+
+  const face = ctx.createLinearGradient(bodyX, bodyY, bodyX, bodyY + bodyH);
+  face.addColorStop(0, '#2e3236');
+  face.addColorStop(0.22, '#25292d');
+  face.addColorStop(0.58, '#1a1d20');
+  face.addColorStop(1, '#121416');
+  ctx.fillStyle = face;
+  roundedRect(ctx, bodyX, bodyY, bodyW, bodyH, size*0.075);
+  ctx.fill();
+
+  // Cast / orange-peel paint texture
+  ctx.save();
+  roundedRect(ctx, bodyX, bodyY, bodyW, bodyH, size*0.075);
+  ctx.clip();
+
+  for(let i=0;i<2600;i++){
+    const rx = seededNoise(i*2.17);
+    const ry = seededNoise(i*6.91);
+    const rr = 0.35 + seededNoise(i*5.13)*1.35;
+    const alpha = 0.010 + seededNoise(i*9.11)*0.020;
+    ctx.fillStyle = seededNoise(i*4.31) > 0.45
+      ? `rgba(255,255,255,${alpha})`
+      : `rgba(0,0,0,${alpha*1.05})`;
+    ctx.beginPath();
+    ctx.arc(bodyX + rx*bodyW, bodyY + ry*bodyH, rr*size*0.0020, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  for(let i=0;i<520;i++){
+    const rx = seededNoise(i*12.4);
+    const ry = seededNoise(i*7.6);
+    const rr = size*(0.004 + seededNoise(i*2.9)*0.004);
+    const gx = bodyX + rx*bodyW;
+    const gy = bodyY + ry*bodyH;
+    const blob = ctx.createRadialGradient(gx, gy, 0, gx, gy, rr);
+    blob.addColorStop(0, i%2===0 ? 'rgba(255,255,255,0.030)' : 'rgba(0,0,0,0.040)');
+    blob.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = blob;
+    ctx.beginPath();
+    ctx.arc(gx, gy, rr, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  // faint handling / wipe marks
+  for(let i=0;i<180;i++){
+    const yy = bodyY + seededNoise(i*3.1) * bodyH;
+    const xx = bodyX + seededNoise(i*7.2) * bodyW * 0.28;
+    const len = bodyW * (0.40 + seededNoise(i*4.7)*0.45);
+    const alpha = 0.008 + seededNoise(i*2.5)*0.012;
+    ctx.strokeStyle = i % 2 === 0
+      ? `rgba(255,255,255,${alpha})`
+      : `rgba(0,0,0,${alpha})`;
+    ctx.lineWidth = size*0.0010 + seededNoise(i*8.1)*size*0.0011;
+    ctx.beginPath();
+    ctx.moveTo(xx, yy);
+    ctx.lineTo(Math.min(bodyX+bodyW, xx+len), yy + (seededNoise(i*5.4)-0.5)*size*0.002);
+    ctx.stroke();
+  }
+
+  // soft satin sheen
+  const sheen = ctx.createLinearGradient(bodyX, bodyY, bodyX+bodyW, bodyY+bodyH);
+  sheen.addColorStop(0, 'rgba(255,255,255,0.07)');
+  sheen.addColorStop(0.12, 'rgba(255,255,255,0.02)');
+  sheen.addColorStop(0.30, 'rgba(255,255,255,0.00)');
+  sheen.addColorStop(0.75, 'rgba(0,0,0,0.00)');
+  sheen.addColorStop(1, 'rgba(0,0,0,0.10)');
+  ctx.fillStyle = sheen;
+  roundedRect(ctx, bodyX, bodyY, bodyW, bodyH, size*0.075);
+  ctx.fill();
+
+  ctx.restore();
+
+  // outline and subtle top edge
+  ctx.strokeStyle = '#090b0d';
+  ctx.lineWidth = size*0.010;
+  roundedRect(ctx, bodyX, bodyY, bodyW, bodyH, size*0.075);
+  ctx.stroke();
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.045)';
+  ctx.lineWidth = size*0.0022;
+  roundedRect(ctx, bodyX + size*0.006, bodyY + size*0.006,
+              bodyW - size*0.012, bodyH - size*0.012, size*0.067);
+  ctx.stroke();
+
+  // recessed circular opening
+  const recessOuter = bezelR*1.09;
+  const recessInner = bezelR*0.88;
+
+  const cavity = ctx.createRadialGradient(cx, cy, recessInner*0.68, cx, cy, recessOuter);
+  cavity.addColorStop(0, '#0f1113');
+  cavity.addColorStop(0.72, '#090b0c');
+  cavity.addColorStop(1, '#010202');
+  ctx.fillStyle = cavity;
+  ctx.beginPath();
+  ctx.arc(cx, cy, recessOuter, 0, Math.PI*2);
+  ctx.fill();
+
+  // inner lip, black painted, smoother from rubbing/use
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, recessOuter, 0, Math.PI*2);
+  ctx.arc(cx, cy, recessInner, 0, Math.PI*2, true);
+  ctx.closePath();
+
+  const lip = ctx.createLinearGradient(cx-recessOuter, cy-recessOuter, cx+recessOuter, cy+recessOuter);
+  lip.addColorStop(0, '#3d4246');
+  lip.addColorStop(0.18, '#2a2e32');
+  lip.addColorStop(0.50, '#171a1d');
+  lip.addColorStop(0.82, '#24282b');
+  lip.addColorStop(1, '#44494e');
+  ctx.fillStyle = lip;
+  ctx.fill('evenodd');
+  ctx.clip('evenodd');
+
+  for(let i=0;i<360;i++){
+    const a = i/360 * Math.PI*2;
+    const r1 = recessInner + (recessOuter-recessInner)*(0.08 + 0.18*seededNoise(i*2.8));
+    const r2 = recessOuter - (recessOuter-recessInner)*(0.06 + 0.12*seededNoise(i*4.1));
+    const alpha = 0.008 + seededNoise(i*7.9)*0.016;
+    ctx.strokeStyle = i % 2 === 0
+      ? `rgba(255,255,255,${alpha})`
+      : `rgba(0,0,0,${alpha*1.1})`;
+    ctx.lineWidth = 0.45 + seededNoise(i*6.3)*0.65;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(a)*r1, cy + Math.sin(a)*r1);
+    ctx.lineTo(cx + Math.cos(a)*r2, cy + Math.sin(a)*r2);
+    ctx.stroke();
+  }
+
+  for(let i=0;i<24;i++){
+    const rr = recessInner + (recessOuter-recessInner)*(0.20 + seededNoise(i*5.7)*0.55);
+    const a0 = seededNoise(i*2.2) * Math.PI*2;
+    const span = 0.10 + seededNoise(i*3.6)*0.24;
+    ctx.strokeStyle = i % 2 === 0 ? 'rgba(255,255,255,0.045)' : 'rgba(0,0,0,0.055)';
+    ctx.lineWidth = 0.8 + seededNoise(i*8.5)*0.5;
+    ctx.beginPath();
+    ctx.arc(cx, cy, rr, a0, a0+span);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // dark shadow under lip
+  ctx.strokeStyle = 'rgba(0,0,0,0.78)';
+  ctx.lineWidth = size*0.009;
+  ctx.beginPath();
+  ctx.arc(cx, cy, recessInner, 0, Math.PI*2);
+  ctx.stroke();
+
+  // used but not abused edge wear
+  ctx.save();
+  ctx.lineCap = 'round';
+  const scratches = [
+    [bodyX+bodyW*0.16, bodyY+bodyH*0.11, 0.050, -0.55],
+    [bodyX+bodyW*0.73, bodyY+bodyH*0.08, 0.038,  0.22],
+    [bodyX+bodyW*0.12, bodyY+bodyH*0.65, 0.045, -0.12],
+    [bodyX+bodyW*0.79, bodyY+bodyH*0.77, 0.045,  0.46],
+    [bodyX+bodyW*0.55, bodyY+bodyH*0.91, 0.026, -0.30],
+    [bodyX+bodyW*0.86, bodyY+bodyH*0.47, 0.020, -0.42]
+  ];
+  scratches.forEach((s,idx)=>{
+    const [sx,sy,length,ang] = s;
+    ctx.strokeStyle = idx%2===0 ? 'rgba(220,225,228,0.15)' : 'rgba(0,0,0,0.18)';
+    ctx.lineWidth = size*0.0014;
+    ctx.beginPath();
+    ctx.moveTo(sx, sy);
+    ctx.lineTo(sx + Math.cos(ang)*size*length, sy + Math.sin(ang)*size*length);
+    ctx.stroke();
+  });
+
+  ctx.strokeStyle = 'rgba(185,190,194,0.12)';
+  ctx.lineWidth = size*0.0028;
+  ctx.beginPath();
+  ctx.arc(cx, cy, recessOuter-size*0.003, -2.42, -1.72);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(cx, cy, recessOuter-size*0.003, 0.55, 1.10);
+  ctx.stroke();
+  ctx.restore();
+}
+// Device-held angle readout. Position is derived from the actual lower-center
+// white square, so resizing the horizon cannot move the text back to the old corner.
+const DEVICE_ANGLE_FONT_SCALE = 0.068;  // exactly 2x the original 0.034 scale
+const DEVICE_ANGLE_GAP_SCALE = 0.022;
+
+function drawDeviceAngleReadout(ctx, centerX, squareBottomY, size, angleDeg){
+  const x = centerX;
+  const y = squareBottomY + size * DEVICE_ANGLE_GAP_SCALE;
+  const value = Math.abs(angleDeg) < 0.05 ? 0 : angleDeg;
+
+  ctx.save();
+  ctx.fillStyle = '#ffffff';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.font = `bold ${Math.max(12, Math.round(size * DEVICE_ANGLE_FONT_SCALE))}px Arial`;
+  ctx.shadowColor = 'rgba(0,0,0,.95)';
+  ctx.shadowBlur = Math.max(1, size*.008);
+  ctx.fillText(`${value >= 0 ? '+' : ''}${value.toFixed(0)}°`, x, y);
+  ctx.restore();
+}
+
+function draw(){
+  const {ctx,w,h} = fitCanvas(canvas);
+  ctx.clearRect(0,0,w,h);
+
+  const size = Math.min(w,h);
+  const cx = w/2;
+  const cy = h/2;
+
+  ctx.fillStyle = '#11161a';
+  ctx.fillRect(0,0,w,h);
+
+  // square case + matte dark-gray aircraft bezel
+  const bodyX = cx - size*0.44;
+  const bodyY = cy - size*0.44;
+  const bodyW = size*0.88;
+  const bodyH = size*0.88;
+  const bezelR = size*0.365;
+
+  drawMatteAircraftBezel(ctx, cx, cy, size, bodyX, bodyY, bodyW, bodyH, bezelR);
+
+  // darker, more utilitarian screws
+  drawScrew(ctx, bodyX + bodyW*0.09, bodyY + bodyH*0.08, size*0.016);
+  drawScrew(ctx, bodyX + bodyW*0.91, bodyY + bodyH*0.08, size*0.016);
+  drawScrew(ctx, bodyX + bodyW*0.09, bodyY + bodyH*0.92, size*0.016);
+  drawScrew(ctx, bodyX + bodyW*0.91, bodyY + bodyH*0.92, size*0.016);
+
+  // gimbal ring darker and more like black painted instrument hardware
+  const ringOuter = size*0.332;
+  const ringInner = size*0.312;
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, ringOuter, 0, Math.PI*2);
+  ctx.arc(cx, cy, ringInner, 0, Math.PI*2, true);
+  ctx.closePath();
+  const ringGrad = ctx.createLinearGradient(cx-ringOuter, cy-ringOuter, cx+ringOuter, cy+ringOuter);
+  ringGrad.addColorStop(0, '#363a3e');
+  ringGrad.addColorStop(0.20, '#23272a');
+  ringGrad.addColorStop(0.50, '#15181a');
+  ringGrad.addColorStop(0.80, '#25292c');
+  ringGrad.addColorStop(1, '#3d4246');
+  ctx.fillStyle = ringGrad;
+  ctx.fill('evenodd');
+
+  ctx.clip('evenodd');
+  for(let i=0;i<260;i++){
+    const a = i/260 * Math.PI*2;
+    const r1 = ringInner + (ringOuter-ringInner)*(0.12 + 0.18*seededNoise(i*3.7));
+    const r2 = ringOuter - (ringOuter-ringInner)*(0.08 + 0.12*seededNoise(i*4.9));
+    const alpha = 0.010 + seededNoise(i*2.6)*0.016;
+    ctx.strokeStyle = i % 3 === 0
+      ? `rgba(255,255,255,${alpha})`
+      : `rgba(0,0,0,${alpha})`;
+    ctx.lineWidth = 0.5 + seededNoise(i*6.2)*0.6;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(a)*r1, cy + Math.sin(a)*r1);
+    ctx.lineTo(cx + Math.cos(a)*r2, cy + Math.sin(a)*r2);
+    ctx.stroke();
+  }
+  for(let i=0;i<14;i++){
+    const rr = ringInner + (ringOuter-ringInner)*(0.28 + seededNoise(i*4.4)*0.36);
+    const a0 = seededNoise(i*3.1) * Math.PI*2;
+    const span = 0.10 + seededNoise(i*8.8)*0.12;
+    ctx.strokeStyle = i % 2 === 0 ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)';
+    ctx.lineWidth = 0.9;
+    ctx.beginPath();
+    ctx.arc(cx, cy, rr, a0, a0+span);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  drawTrunnion(ctx, cx - ringOuter, cy, size*0.025);
+  drawTrunnion(ctx, cx + ringOuter, cy, size*0.025);
+
+  // render and draw spherical ball
+  // Restored tested attitude-indicator convention:
+  // pitch-up moves the horizon down; roll uses the native tested sign.
+  renderBallTexture(-state.pitch, state.roll);
+  const ballR = size*0.300;
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, ballR, 0, Math.PI*2);
+  ctx.clip();
+  ctx.drawImage(texCanvas, cx-ballR, cy-ballR, ballR*2, ballR*2);
+
+  // extra glass sheen over ball
+  const glass = ctx.createLinearGradient(cx - ballR*0.85, cy - ballR*0.85, cx + ballR*0.55, cy + ballR*0.55);
+  glass.addColorStop(0, 'rgba(160,225,236,0.14)');
+  glass.addColorStop(0.16, 'rgba(255,255,255,0.06)');
+  glass.addColorStop(0.45, 'rgba(255,255,255,0)');
+  glass.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = glass;
+  ctx.beginPath();
+  ctx.arc(cx, cy, ballR, 0, Math.PI*2);
+  ctx.fill();
+  ctx.restore();
+
+  // rim around the ball
+  ctx.beginPath();
+  ctx.arc(cx, cy, ballR, 0, Math.PI*2);
+  ctx.strokeStyle = '#020304';
+  ctx.lineWidth = size*0.012;
+  ctx.stroke();
+
+  drawBankScale(ctx, cx, cy, ballR*1.02, size);
+  drawAircraftSymbol(ctx, cx, cy, size);
+  const bottomMarkerInfo = drawBottomMarkers(ctx, cx, bodyY, bodyH, size);
+
+  // subtle case reflection
+  const refl = ctx.createLinearGradient(bodyX, bodyY, bodyX+bodyW, bodyY+bodyH);
+  refl.addColorStop(0, 'rgba(95,200,210,0.10)');
+  refl.addColorStop(0.16, 'rgba(255,255,255,0.03)');
+  refl.addColorStop(0.38, 'rgba(255,255,255,0)');
+  refl.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = refl;
+  roundedRect(ctx, bodyX, bodyY, bodyW, bodyH, size*0.08);
+  ctx.fill();
+
+  // Phone/device pitch angle in degrees: immediately below the actual white square.
+  drawDeviceAngleReadout(ctx, cx, bottomMarkerInfo.squareBottomY, size, state.pitch);
+}
+
+window.addEventListener('resize', draw);
+
+let t0 = performance.now();
+function animate(ts){
+  if (!state.nativeActive){
+    state.pitch = 0;
+    state.roll = 0;
+  }
+  draw();
+  requestAnimationFrame(animate);
+}
+
+draw();
+requestAnimationFrame(animate);
+
+})();
+</script>
+<script>
+(function(){
+
+const canvas = document.getElementById('headingCanvas');
+const readout = document.getElementById('headingReadout');
+const permBtn = document.getElementById('headingPermBtn');
+
+const dialImg = new Image();
+dialImg.src = "data:image/webp;base64,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";
+
+const state = {
+  heading: 0,
+  demoHeading: 0,
+  sensorActive: false,
+  permissionAsked: false,
+  smoothHeading: 0,
+  navBearing: NaN
+};
+
+window.setNavBearing = function(bearingDeg){
+  state.navBearing = Number.isFinite(bearingDeg) ? normalizeHeading(bearingDeg) : NaN;
+};
+
+window.setGpsHeading = function(trackDeg){
+  if (!Number.isFinite(trackDeg)) return;
+  state.heading = normalizeHeading(trackDeg);
+  state.sensorActive = true;
+};
+
+function fitCanvas(c){
+  const rect = c.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  const w = Math.max(1, Math.round(rect.width*dpr));
+  const h = Math.max(1, Math.round(rect.height*dpr));
+  if(c.width !== w || c.height !== h){
+    c.width = w;
+    c.height = h;
+  }
+  return {ctx:c.getContext('2d'), w, h};
+}
+
+function roundedRect(ctx,x,y,w,h,r){
+  r = Math.min(r,w/2,h/2);
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);
+  ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath();
+}
+
+function seed(n){
+  const x=Math.sin(n*12.9898+78.233)*43758.5453;
+  return x-Math.floor(x);
+}
+
+function drawScrew(ctx,cx,cy,r,angle){
+  const g=ctx.createRadialGradient(cx-r*.3,cy-r*.3,r*.08,cx,cy,r);
+  g.addColorStop(0,'#777d81');
+  g.addColorStop(.42,'#474d51');
+  g.addColorStop(1,'#171a1d');
+  ctx.beginPath();
+  ctx.arc(cx,cy,r,0,Math.PI*2);
+  ctx.fillStyle=g;
+  ctx.fill();
+  ctx.strokeStyle='#07090a';
+  ctx.lineWidth=r*.18;
+  ctx.stroke();
+
+  ctx.save();
+  ctx.translate(cx,cy);
+  ctx.rotate(angle);
+  ctx.strokeStyle='#2b3033';
+  ctx.lineWidth=r*.17;
+  ctx.lineCap='round';
+  ctx.beginPath();
+  ctx.moveTo(-r*.52,0);
+  ctx.lineTo(r*.52,0);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawHousing(ctx,cx,cy,size){
+  const x=cx-size*.43;
+  const y=cy-size*.43;
+  const w=size*.86;
+  const h=size*.86;
+
+  const g=ctx.createLinearGradient(x,y,x,y+h);
+  g.addColorStop(0,'#2d3236');
+  g.addColorStop(.25,'#23272a');
+  g.addColorStop(.62,'#181b1e');
+  g.addColorStop(1,'#101214');
+  ctx.fillStyle=g;
+  roundedRect(ctx,x,y,w,h,size*.045);
+  ctx.fill();
+
+  ctx.save();
+  roundedRect(ctx,x,y,w,h,size*.045);
+  ctx.clip();
+  for(let i=0;i<2500;i++){
+    const rx=seed(i*2.13);
+    const ry=seed(i*6.37);
+    const rr=size*(.0007+seed(i*3.17)*.0019);
+    const a=.009+seed(i*4.9)*.024;
+    ctx.fillStyle=seed(i*8.1)>.48
+      ? `rgba(255,255,255,${a})`
+      : `rgba(0,0,0,${a*1.1})`;
+    ctx.beginPath();
+    ctx.arc(x+rx*w,y+ry*h,rr,0,Math.PI*2);
+    ctx.fill();
+  }
+  ctx.restore();
+
+  ctx.strokeStyle='#07090a';
+  ctx.lineWidth=size*.009;
+  roundedRect(ctx,x,y,w,h,size*.045);
+  ctx.stroke();
+
+  ctx.strokeStyle='rgba(255,255,255,.04)';
+  ctx.lineWidth=size*.002;
+  roundedRect(ctx,x+size*.006,y+size*.006,w-size*.012,h-size*.012,size*.040);
+  ctx.stroke();
+
+  drawScrew(ctx,x+w*.10,y+h*.10,size*.016,-.55);
+  drawScrew(ctx,x+w*.90,y+h*.10,size*.016,.45);
+  drawScrew(ctx,x+w*.10,y+h*.90,size*.016,.35);
+  drawScrew(ctx,x+w*.90,y+h*.90,size*.016,-.40);
+}
+
+function drawBezel(ctx,cx,cy,size){
+  const outer=size*.355;
+  const inner=size*.305;
+
+  const cav=ctx.createRadialGradient(cx,cy,inner*.70,cx,cy,outer);
+  cav.addColorStop(0,'#111315');
+  cav.addColorStop(.72,'#080a0b');
+  cav.addColorStop(1,'#010202');
+  ctx.fillStyle=cav;
+  ctx.beginPath();
+  ctx.arc(cx,cy,outer,0,Math.PI*2);
+  ctx.fill();
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx,cy,outer,0,Math.PI*2);
+  ctx.arc(cx,cy,inner,0,Math.PI*2,true);
+  ctx.closePath();
+
+  const ring=ctx.createLinearGradient(cx-outer,cy-outer,cx+outer,cy+outer);
+  ring.addColorStop(0,'#43484c');
+  ring.addColorStop(.18,'#2b3033');
+  ring.addColorStop(.5,'#171a1c');
+  ring.addColorStop(.82,'#282c2f');
+  ring.addColorStop(1,'#484d51');
+  ctx.fillStyle=ring;
+  ctx.fill('evenodd');
+
+  ctx.clip('evenodd');
+  for(let i=0;i<420;i++){
+    const a=i/420*Math.PI*2;
+    const r1=inner+(outer-inner)*(.08+.18*seed(i*3.7));
+    const r2=outer-(outer-inner)*(.06+.12*seed(i*4.9));
+    const al=.008+seed(i*6.3)*.016;
+    ctx.strokeStyle=i%2===0
+      ? `rgba(255,255,255,${al})`
+      : `rgba(0,0,0,${al*1.1})`;
+    ctx.lineWidth=.45+seed(i*8.1)*.65;
+    ctx.beginPath();
+    ctx.moveTo(cx+Math.cos(a)*r1,cy+Math.sin(a)*r1);
+    ctx.lineTo(cx+Math.cos(a)*r2,cy+Math.sin(a)*r2);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  ctx.strokeStyle='rgba(0,0,0,.78)';
+  ctx.lineWidth=size*.010;
+  ctx.beginPath();
+  ctx.arc(cx,cy,inner,0,Math.PI*2);
+  ctx.stroke();
+
+  return {outer, inner};
+}
+
+function drawDialFromReference(ctx,cx,cy,size,innerR,heading){
+  const r = innerR * 0.94;
+
+  // dark background
+  const face=ctx.createRadialGradient(cx-size*.05,cy-size*.07,size*.015,cx,cy,r);
+  face.addColorStop(0,'#222527');
+  face.addColorStop(.62,'#101213');
+  face.addColorStop(1,'#070809');
+  ctx.fillStyle=face;
+  ctx.beginPath();
+  ctx.arc(cx,cy,r,0,Math.PI*2);
+  ctx.fill();
+
+  // Clip to circular window
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx,cy,r,0,Math.PI*2);
+  ctx.clip();
+
+  // Rotate exact dial image according to phone north.
+  // We use the uploaded reference image itself and spin it as a compass card.
+  ctx.translate(cx,cy);
+  ctx.rotate(-heading * Math.PI / 180);
+
+  // Scale so the dial graphic fills the circular area nicely
+  const scale = (r * 2.25) / Math.min(dialImg.width, dialImg.height);
+  const dw = dialImg.width * scale;
+  const dh = dialImg.height * scale;
+
+  ctx.drawImage(dialImg, -dw/2, -dh/2, dw, dh);
+  ctx.restore();
+
+  // Fixed top lubber triangle
+  ctx.fillStyle = '#f4f5f3';
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - r*0.98);
+  ctx.lineTo(cx - size*0.014, cy - r*0.88);
+  ctx.lineTo(cx + size*0.014, cy - r*0.88);
+  ctx.closePath();
+  ctx.fill();
+
+  // subtle glass
+  const glass=ctx.createLinearGradient(cx-r,cy-r,cx+r,cy+r);
+  glass.addColorStop(0,'rgba(255,255,255,.10)');
+  glass.addColorStop(.16,'rgba(255,255,255,.035)');
+  glass.addColorStop(.42,'rgba(255,255,255,0)');
+  glass.addColorStop(1,'rgba(0,0,0,.06)');
+  ctx.fillStyle=glass;
+  ctx.beginPath();
+  ctx.arc(cx,cy,r,0,Math.PI*2);
+  ctx.fill();
+}
+
+function drawNavBearingLine(ctx,cx,cy,size,innerR,trackDeg,bearingDeg){
+  if(!Number.isFinite(bearingDeg)) return;
+
+  // The compass card is GPS-track-up. Convert the absolute true bearing to
+  // an angle relative to the current GPS track, then draw a thin green line
+  // from the center toward the waypoint.
+  const relative=((bearingDeg-trackDeg+540)%360)-180;
+  const a=(relative-90)*Math.PI/180;
+  const r=innerR*0.82;
+
+  ctx.save();
+  ctx.strokeStyle='#72ff7a';
+  ctx.lineWidth=Math.max(1,size*.0045);
+  ctx.shadowColor='rgba(114,255,122,.45)';
+  ctx.shadowBlur=Math.max(1,size*.008);
+  ctx.beginPath();
+  ctx.moveTo(cx,cy);
+  ctx.lineTo(cx+Math.cos(a)*r,cy+Math.sin(a)*r);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function draw(){
+  const {ctx,w,h} = fitCanvas(canvas);
+  ctx.clearRect(0,0,w,h);
+
+  const size = Math.min(w,h);
+  const cx = w/2;
+  const cy = h/2;
+
+  ctx.fillStyle='#111416';
+  ctx.fillRect(0,0,w,h);
+
+  drawHousing(ctx,cx,cy,size);
+  const bezel = drawBezel(ctx,cx,cy,size);
+
+  // GPS track only. If no valid track is available, hold the last displayed value.
+  let target = state.sensorActive ? state.heading : state.smoothHeading;
+  let delta = ((target - state.smoothHeading + 540) % 360) - 180;
+  state.smoothHeading = (state.smoothHeading + delta * 0.12 + 360) % 360;
+
+  drawDialFromReference(ctx,cx,cy,size,bezel.inner,state.smoothHeading);
+  drawNavBearingLine(ctx,cx,cy,size,bezel.inner,state.smoothHeading,state.navBearing);
+  readout.textContent = state.sensorActive ? `GPS track: ${Math.round(state.smoothHeading)}°` : 'Waiting for GPS track…';
+}
+
+function normalizeHeading(deg){
+  return (deg % 360 + 360) % 360;
+}
+
+// Heading source is native Android GPS track only. Magnetometer/device-orientation input is intentionally disabled.
+window.addEventListener('resize', draw);
+
+let t0 = performance.now();
+function animate(ts){
+  draw();
+  requestAnimationFrame(animate);
+}
+
+dialImg.onload = () => {
+  // Native Android GPS supplies track; do not start browser compass listeners.
+  draw();
+  requestAnimationFrame(animate);
+};
+
+})();
+</script>
+<script>
+(function(){
+
+const canvas = document.getElementById('altCanvas');
+const readout = document.getElementById('altReadout');
+const gpsBtn = document.getElementById('altGpsBtn');
+
+const state = {
+  gpsActive: false,
+  altitudeM: 0,
+  smoothFeet: 0,
+  message: 'Waiting for native GPS…'
+};
+
+window.setGpsAltitudeMeters = function(altitudeM){
+  if (!Number.isFinite(altitudeM)) return;
+  state.altitudeM = altitudeM;
+  state.gpsActive = true;
+};
+
+function fitCanvas(c){
+  const rect = c.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  const w = Math.max(1, Math.round(rect.width*dpr));
+  const h = Math.max(1, Math.round(rect.height*dpr));
+  if(c.width !== w || c.height !== h){
+    c.width = w;
+    c.height = h;
+  }
+  return {ctx:c.getContext('2d'), w, h};
+}
+
+function roundedRect(ctx,x,y,w,h,r){
+  r=Math.min(r,w/2,h/2);
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);
+  ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath();
+}
+
+function seed(n){
+  const x=Math.sin(n*12.9898+78.233)*43758.5453;
+  return x-Math.floor(x);
+}
+
+function drawScrew(ctx,cx,cy,r,angle){
+  const g=ctx.createRadialGradient(cx-r*.3,cy-r*.3,r*.08,cx,cy,r);
+  g.addColorStop(0,'#787d81');
+  g.addColorStop(.42,'#474d51');
+  g.addColorStop(1,'#171a1d');
+  ctx.beginPath();
+  ctx.arc(cx,cy,r,0,Math.PI*2);
+  ctx.fillStyle=g;
+  ctx.fill();
+  ctx.strokeStyle='#07090a';
+  ctx.lineWidth=r*.18;
+  ctx.stroke();
+
+  ctx.save();
+  ctx.translate(cx,cy);
+  ctx.rotate(angle);
+  ctx.strokeStyle='#2b3033';
+  ctx.lineWidth=r*.17;
+  ctx.lineCap='round';
+  ctx.beginPath();
+  ctx.moveTo(-r*.52,0);
+  ctx.lineTo(r*.52,0);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawHousing(ctx,cx,cy,size){
+  const x=cx-size*.43;
+  const y=cy-size*.43;
+  const w=size*.86;
+  const h=size*.86;
+
+  const g=ctx.createLinearGradient(x,y,x,y+h);
+  g.addColorStop(0,'#2d3236');
+  g.addColorStop(.25,'#23272a');
+  g.addColorStop(.62,'#181b1e');
+  g.addColorStop(1,'#101214');
+  ctx.fillStyle=g;
+  roundedRect(ctx,x,y,w,h,size*.050);
+  ctx.fill();
+
+  ctx.save();
+  roundedRect(ctx,x,y,w,h,size*.050);
+  ctx.clip();
+  for(let i=0;i<2600;i++){
+    const rx=seed(i*2.13);
+    const ry=seed(i*6.37);
+    const rr=size*(.0007+seed(i*3.17)*.0019);
+    const a=.009+seed(i*4.9)*.024;
+    ctx.fillStyle=seed(i*8.1)>.48
+      ? `rgba(255,255,255,${a})`
+      : `rgba(0,0,0,${a*1.1})`;
+    ctx.beginPath();
+    ctx.arc(x+rx*w,y+ry*h,rr,0,Math.PI*2);
+    ctx.fill();
+  }
+  ctx.restore();
+
+  ctx.strokeStyle='#07090a';
+  ctx.lineWidth=size*.009;
+  roundedRect(ctx,x,y,w,h,size*.050);
+  ctx.stroke();
+
+  ctx.strokeStyle='rgba(255,255,255,.04)';
+  ctx.lineWidth=size*.002;
+  roundedRect(ctx,x+size*.006,y+size*.006,w-size*.012,h-size*.012,size*.044);
+  ctx.stroke();
+
+  drawScrew(ctx,x+w*.10,y+h*.10,size*.016,-.55);
+  drawScrew(ctx,x+w*.90,y+h*.10,size*.016,.45);
+  drawScrew(ctx,x+w*.10,y+h*.90,size*.016,.35);
+  drawScrew(ctx,x+w*.90,y+h*.90,size*.016,-.40);
+}
+
+function drawBezel(ctx,cx,cy,size){
+  const outer=size*.355;
+  const inner=size*.305;
+
+  const cav=ctx.createRadialGradient(cx,cy,inner*.70,cx,cy,outer);
+  cav.addColorStop(0,'#111315');
+  cav.addColorStop(.72,'#080a0b');
+  cav.addColorStop(1,'#010202');
+  ctx.fillStyle=cav;
+  ctx.beginPath();
+  ctx.arc(cx,cy,outer,0,Math.PI*2);
+  ctx.fill();
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx,cy,outer,0,Math.PI*2);
+  ctx.arc(cx,cy,inner,0,Math.PI*2,true);
+  ctx.closePath();
+
+  const ring=ctx.createLinearGradient(cx-outer,cy-outer,cx+outer,cy+outer);
+  ring.addColorStop(0,'#43484c');
+  ring.addColorStop(.18,'#2b3033');
+  ring.addColorStop(.5,'#171a1c');
+  ring.addColorStop(.82,'#282c2f');
+  ring.addColorStop(1,'#484d51');
+  ctx.fillStyle=ring;
+  ctx.fill('evenodd');
+
+  ctx.clip('evenodd');
+  for(let i=0;i<420;i++){
+    const a=i/420*Math.PI*2;
+    const r1=inner+(outer-inner)*(.08+.18*seed(i*3.7));
+    const r2=outer-(outer-inner)*(.06+.12*seed(i*4.9));
+    const al=.008+seed(i*6.3)*.016;
+    ctx.strokeStyle=i%2===0
+      ? `rgba(255,255,255,${al})`
+      : `rgba(0,0,0,${al*1.1})`;
+    ctx.lineWidth=.45+seed(i*8.1)*.65;
+    ctx.beginPath();
+    ctx.moveTo(cx+Math.cos(a)*r1,cy+Math.sin(a)*r1);
+    ctx.lineTo(cx+Math.cos(a)*r2,cy+Math.sin(a)*r2);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  ctx.strokeStyle='rgba(0,0,0,.78)';
+  ctx.lineWidth=size*.010;
+  ctx.beginPath();
+  ctx.arc(cx,cy,inner,0,Math.PI*2);
+  ctx.stroke();
+
+  return {outer,inner};
+}
+
+function drawDial(ctx,cx,cy,size,innerR){
+  const r=innerR*.94;
+
+  const face=ctx.createRadialGradient(cx-size*.05,cy-size*.07,size*.015,cx,cy,r);
+  face.addColorStop(0,'#232628');
+  face.addColorStop(.62,'#101213');
+  face.addColorStop(1,'#070809');
+  ctx.fillStyle=face;
+  ctx.beginPath();
+  ctx.arc(cx,cy,r,0,Math.PI*2);
+  ctx.fill();
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx,cy,r,0,Math.PI*2);
+  ctx.clip();
+  for(let i=0;i<1400;i++){
+    const a=seed(i*7.1)*Math.PI*2;
+    const rr=Math.sqrt(seed(i*3.4))*r;
+    const px=cx+Math.cos(a)*rr;
+    const py=cy+Math.sin(a)*rr;
+    const al=.007+seed(i*5.8)*.016;
+    ctx.fillStyle=seed(i*9.2)>.5
+      ? `rgba(255,255,255,${al})`
+      : `rgba(0,0,0,${al})`;
+    ctx.fillRect(px,py,size*.0011,size*.0011);
+  }
+  ctx.restore();
+
+  // tick marks
+  ctx.save();
+  ctx.translate(cx,cy);
+  ctx.strokeStyle='#f3f3ef';
+  for(let i=0;i<50;i++){
+    const a=(i/50)*Math.PI*2 - Math.PI/2;
+    const major = i%5===0;
+    const outer = r*.90;
+    const inner = major ? r*.73 : r*.82;
+    ctx.lineWidth = major ? size*.0048 : size*.0022;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(a)*inner, Math.sin(a)*inner);
+    ctx.lineTo(Math.cos(a)*outer, Math.sin(a)*outer);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // numerals 0..9 around dial
+  ctx.fillStyle='#f3f3ef';
+  ctx.font=`normal ${Math.round(size*.070)}px Arial`;
+  ctx.textAlign='center';
+  ctx.textBaseline='middle';
+  const nums = ['0','1','2','3','4','5','6','7','8','9'];
+  nums.forEach((txt,i)=>{
+    const a=(i/10)*Math.PI*2 - Math.PI/2;
+    const rr=r*.62;
+    ctx.fillText(txt, cx+Math.cos(a)*rr, cy+Math.sin(a)*rr);
+  });
+
+  // top text - same font style as the dial numerals
+  ctx.fillStyle='#f3f3ef';
+  ctx.font=`normal ${Math.round(size*.030)}px Arial`;
+  ctx.fillText('FEET', cx+size*.085, cy-r*.80);
+
+  // small left annotation
+  ctx.font=`bold ${Math.round(size*.012)}px Arial`;
+  ctx.textAlign='left';
+  ctx.fillText('CALIBRATED', cx-r*.36, cy-r*.20);
+  ctx.fillText('FT-500 TO 20,000', cx-r*.36, cy-r*.15);
+
+  // glass reflection
+  const glass=ctx.createLinearGradient(cx-r,cy-r,cx+r,cy+r);
+  glass.addColorStop(0,'rgba(255,255,255,.10)');
+  glass.addColorStop(.16,'rgba(255,255,255,.035)');
+  glass.addColorStop(.42,'rgba(255,255,255,0)');
+  glass.addColorStop(1,'rgba(0,0,0,.06)');
+  ctx.fillStyle=glass;
+  ctx.beginPath();
+  ctx.arc(cx,cy,r,0,Math.PI*2);
+  ctx.fill();
+
+  return r;
+}
+
+function drawAltimeterNeedles(ctx,cx,cy,r,size,feet){
+  // 3-pointer altimeter logic exactly as requested:
+  // - dial divided 0..9
+  // - long needle = hundreds of feet (1 full turn per 1,000 ft)
+  // - short needle = thousands of feet (1 full turn per 10,000 ft)
+  // - thin triangular needle = tens of thousands of feet (1 full turn per 100,000 ft)
+
+  // Keep altitude non-negative for display logic
+  feet = Math.max(0, feet);
+
+  const hundredsAngle = ((feet % 1000) / 1000) * Math.PI*2 - Math.PI/2;
+  const thousandsAngle = ((feet % 10000) / 10000) * Math.PI*2 - Math.PI/2;
+  const tenThousandsAngle = ((feet % 100000) / 100000) * Math.PI*2 - Math.PI/2;
+
+  ctx.save();
+  ctx.translate(cx,cy);
+  ctx.shadowColor='rgba(0,0,0,.55)';
+  ctx.shadowBlur=size*.008;
+  ctx.shadowOffsetX=size*.006;
+  ctx.shadowOffsetY=size*.006;
+
+  // SHORT needle = THOUSANDS of feet
+  // White front pointer + black rear tail / counterbalance.
+  ctx.save();
+  ctx.rotate(thousandsAngle);
+
+  // black rear tail - longer trapezoid
+  ctx.fillStyle='#0a0c0d';
+  ctx.beginPath();
+  ctx.moveTo(-r*.26, -size*.0044);      // rear upper
+  ctx.lineTo(-size*.090, -size*.0044);  // long top edge
+  ctx.lineTo(-size*.020, -size*.0105);  // front upper, wider near hub
+  ctx.lineTo(-size*.020,  size*.0105);  // front lower
+  ctx.lineTo(-size*.090,  size*.0044);  // long bottom edge
+  ctx.lineTo(-r*.26,      size*.0044);  // rear lower
+  ctx.closePath();
+  ctx.fill();
+
+  // black tail end cap
+  ctx.beginPath();
+  ctx.arc(-r*.26, 0, size*.0052, 0, Math.PI*2);
+  ctx.fill();
+
+  // white main pointer
+  ctx.fillStyle='#f1f1ed';
+  ctx.beginPath();
+  ctx.moveTo(-size*.020, -size*.014);
+  ctx.lineTo(r*.44, -size*.010);
+  ctx.lineTo(r*.54, 0);
+  ctx.lineTo(r*.44, size*.010);
+  ctx.lineTo(-size*.020, size*.014);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.restore();
+
+  // LONG needle = HUNDREDS of feet
+  // White front pointer + black rear tail / counterbalance.
+  ctx.save();
+  ctx.rotate(hundredsAngle);
+
+  // black rear tail - longer trapezoid
+  ctx.fillStyle='#0a0c0d';
+  ctx.beginPath();
+  ctx.moveTo(-r*.34, -size*.0028);      // rear upper
+  ctx.lineTo(-size*.110, -size*.0028);  // long top edge
+  ctx.lineTo(-size*.028, -size*.0055);  // front upper, wider near hub
+  ctx.lineTo(-size*.028,  size*.0055);  // front lower
+  ctx.lineTo(-size*.110,  size*.0028);  // long bottom edge
+  ctx.lineTo(-r*.34,      size*.0028);  // rear lower
+  ctx.closePath();
+  ctx.fill();
+
+  // black round end to the tail
+  ctx.beginPath();
+  ctx.arc(-r*.34, 0, size*.0038, 0, Math.PI*2);
+  ctx.fill();
+
+  // white main pointer
+  ctx.fillStyle='#f1f1ed';
+  ctx.beginPath();
+  ctx.moveTo(-size*.028, -size*.007);
+  ctx.lineTo(r*.74, -size*.005);
+  ctx.lineTo(r*.84, 0);
+  ctx.lineTo(r*.74, size*.005);
+  ctx.lineTo(-size*.028, size*.007);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.restore();
+
+  // THIN TRIANGULAR needle = TENS OF THOUSANDS of feet
+  // Long and very slender, reaching almost to the outer tick marks.
+  ctx.save();
+  ctx.rotate(tenThousandsAngle);
+
+  // Tens-of-thousands needle shaft:
+  // INNER half (near the center hub) is wider.
+  // OUTER half (toward the triangle) stays thin.
+  const shaftStartX = size*.004;
+  const shaftEndX = r*.72;
+  const shaftMidX = shaftStartX + (shaftEndX - shaftStartX) * 0.60;
+
+  ctx.fillStyle='#ffffff';
+
+  // inner half: wider
+  ctx.beginPath();
+  ctx.moveTo(shaftStartX, -size*.0080);
+  ctx.lineTo(shaftMidX,   -size*.0080);
+  ctx.lineTo(shaftMidX,    size*.0080);
+  ctx.lineTo(shaftStartX,  size*.0080);
+  ctx.closePath();
+  ctx.fill();
+
+  // outer half: thin
+  ctx.beginPath();
+  ctx.moveTo(shaftMidX, -size*.0035);
+  ctx.lineTo(shaftEndX, -size*.0035);
+  ctx.lineTo(shaftEndX,  size*.0035);
+  ctx.lineTo(shaftMidX,  size*.0035);
+  ctx.closePath();
+  ctx.fill();
+
+  // TENS-OF-THOUSANDS pointer:
+  // Symmetric inward-pointing isosceles triangle.
+  const triBaseX = r*.86;
+  const triLength = size*.054;
+  const triHalfWidth = size*.027;
+  const triApexX = triBaseX - triLength;
+
+  ctx.fillStyle='#f1f1ed';
+  ctx.beginPath();
+  ctx.moveTo(triApexX, 0);                   // inward-facing apex
+  ctx.lineTo(triBaseX, -triHalfWidth);       // upper base corner
+  ctx.lineTo(triBaseX,  triHalfWidth);       // lower base corner
+  ctx.closePath();
+  ctx.fill();
+
+  // subtle center line
+  ctx.strokeStyle='rgba(20,22,23,0.55)';
+  ctx.lineWidth=size*.0012;
+  ctx.beginPath();
+  ctx.moveTo(triApexX + triLength*.12, 0);
+  ctx.lineTo(triBaseX - triLength*.10, 0);
+  ctx.stroke();
+
+  ctx.restore();
+
+  ctx.restore();
+
+  // center hub
+  const hub=ctx.createRadialGradient(cx-size*.008,cy-size*.008,size*.004,cx,cy,size*.034);
+  hub.addColorStop(0,'#4f5151');
+  hub.addColorStop(.5,'#202223');
+  hub.addColorStop(1,'#080909');
+  ctx.fillStyle=hub;
+  ctx.beginPath();
+  ctx.arc(cx,cy,size*.033,0,Math.PI*2);
+  ctx.fill();
+
+  ctx.strokeStyle='#060707';
+  ctx.lineWidth=size*.004;
+  ctx.stroke();
+}
+
+function drawReadoutBox(ctx,cx,cy,size,feet){
+  const w = size*.18;                 // smaller box
+  const h = size*.048;
+  const x = cx - w/2;                 // centered horizontally
+  const y = cy + size*.09 - h/2;      // same halfway position
+
+  ctx.fillStyle='rgba(8,10,11,0.92)';
+  ctx.strokeStyle='rgba(255,255,255,0.08)';
+  ctx.lineWidth=size*.002;
+  roundedRect(ctx, x, y, w, h, size*.007);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle='#ffffff';
+  ctx.textAlign='center';
+  ctx.textBaseline='middle';
+  ctx.font=`bold ${Math.round(size*.028)}px Arial`;  // larger numbers
+  ctx.fillText(`${Math.round(feet).toLocaleString()} ft`, x+w/2, y+h/2);
+}
+
+function metersToFeet(m){
+  return m * 3.28084;
+}
+
+function draw(){
+  const {ctx,w,h}=fitCanvas(canvas);
+  ctx.clearRect(0,0,w,h);
+
+  const size=Math.min(w,h);
+  const cx=w/2;
+  const cy=h/2;
+
+  ctx.fillStyle='#111416';
+  ctx.fillRect(0,0,w,h);
+
+  drawHousing(ctx,cx,cy,size);
+  const bezel=drawBezel(ctx,cx,cy,size);
+  const dialR=drawDial(ctx,cx,cy,size,bezel.inner);
+
+  const targetFeet = state.gpsActive ? metersToFeet(state.altitudeM) : state.smoothFeet;
+  state.smoothFeet += (targetFeet - state.smoothFeet) * 0.12;
+
+  // Draw the numeric altitude window first so all needles pass over it.
+  drawReadoutBox(ctx,cx,cy,size,state.smoothFeet);
+  drawAltimeterNeedles(ctx,cx,cy,dialR,size,state.smoothFeet);
+
+  readout.textContent = state.gpsActive ? `GPS altitude: ${Math.round(state.smoothFeet).toLocaleString()} ft` : 'Waiting for GPS altitude…';
+}
+
+// Altimeter source is native Android GPS altitude only. Browser/demo altitude is intentionally disabled.
+window.addEventListener('resize', draw);
+
+let t0 = performance.now();
+function animate(ts){
+  draw();
+  requestAnimationFrame(animate);
+}
+
+// Native Android supplies GPS altitude; browser geolocation is not started.
+draw();
+requestAnimationFrame(animate);
+
+})();
+</script>
+<script>
+(function(){
+
+const canvas = document.getElementById('vsiCanvas');
+
+const state = {
+  fpm: 0,
+  targetFpm: 0
+};
+
+window.setVerticalSpeedFpm = function(fpm){
+  if (!Number.isFinite(fpm)) return;
+  state.targetFpm = Math.max(-6000, Math.min(6000, fpm));
+};
+
+function fitCanvas(c){
+  const rect = c.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  const w = Math.max(1, Math.round(rect.width*dpr));
+  const h = Math.max(1, Math.round(rect.height*dpr));
+  if(c.width !== w || c.height !== h){
+    c.width = w;
+    c.height = h;
+  }
+  return {ctx:c.getContext('2d'),w,h};
+}
+
+function roundedRect(ctx,x,y,w,h,r){
+  r=Math.min(r,w/2,h/2);
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);
+  ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath();
+}
+
+function seed(n){
+  const x=Math.sin(n*12.9898+78.233)*43758.5453;
+  return x-Math.floor(x);
+}
+
+function drawScrew(ctx,cx,cy,r,angle){
+  const g=ctx.createRadialGradient(cx-r*.3,cy-r*.3,r*.08,cx,cy,r);
+  g.addColorStop(0,'#8e9498');
+  g.addColorStop(.42,'#555b60');
+  g.addColorStop(1,'#1d2124');
+  ctx.beginPath();
+  ctx.arc(cx,cy,r,0,Math.PI*2);
+  ctx.fillStyle=g;
+  ctx.fill();
+  ctx.strokeStyle='#090b0c';
+  ctx.lineWidth=r*.18;
+  ctx.stroke();
+
+  ctx.save();
+  ctx.translate(cx,cy);
+  ctx.rotate(angle);
+  ctx.strokeStyle='#2f3437';
+  ctx.lineWidth=r*.17;
+  ctx.lineCap='round';
+  ctx.beginPath();
+  ctx.moveTo(-r*.55,0);
+  ctx.lineTo(r*.55,0);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawHousing(ctx,cx,cy,size){
+  const x=cx-size*.43;
+  const y=cy-size*.43;
+  const w=size*.86;
+  const h=size*.86;
+
+  const g=ctx.createLinearGradient(x,y,x,y+h);
+  g.addColorStop(0,'#303438');
+  g.addColorStop(.24,'#25292c');
+  g.addColorStop(.62,'#181b1e');
+  g.addColorStop(1,'#101214');
+  ctx.fillStyle=g;
+  roundedRect(ctx,x,y,w,h,size*.065);
+  ctx.fill();
+
+  // stronger black-painted texture like a real instrument case
+  ctx.save();
+  roundedRect(ctx,x,y,w,h,size*.065);
+  ctx.clip();
+
+  for(let i=0;i<2600;i++){
+    const rx=seed(i*2.13);
+    const ry=seed(i*6.37);
+    const rr=size*(.0008+seed(i*3.17)*.0021);
+    const a=.010+seed(i*4.9)*.026;
+    ctx.fillStyle=seed(i*8.1)>.48
+      ? `rgba(255,255,255,${a})`
+      : `rgba(0,0,0,${a*1.15})`;
+    ctx.beginPath();
+    ctx.arc(x+rx*w,y+ry*h,rr,0,Math.PI*2);
+    ctx.fill();
+  }
+
+  // subtle rubbed areas
+  const spots=[
+    [.18,.17,.09,.035],
+    [.79,.20,.08,.028],
+    [.16,.74,.09,.038],
+    [.75,.75,.10,.035]
+  ];
+  spots.forEach((s,i)=>{
+    const gx=x+w*s[0], gy=y+h*s[1], rr=size*s[2];
+    const rg=ctx.createRadialGradient(gx,gy,0,gx,gy,rr);
+    rg.addColorStop(0,i%2===0?'rgba(255,255,255,.035)':'rgba(0,0,0,.05)');
+    rg.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=rg;
+    ctx.beginPath();
+    ctx.arc(gx,gy,rr,0,Math.PI*2);
+    ctx.fill();
+  });
+
+  ctx.restore();
+
+  ctx.strokeStyle='#080a0b';
+  ctx.lineWidth=size*.009;
+  roundedRect(ctx,x,y,w,h,size*.065);
+  ctx.stroke();
+
+  ctx.strokeStyle='rgba(255,255,255,.045)';
+  ctx.lineWidth=size*.002;
+  roundedRect(ctx,x+size*.006,y+size*.006,w-size*.012,h-size*.012,size*.058);
+  ctx.stroke();
+
+  // corner screws
+  drawScrew(ctx,x+w*.105,y+h*.105,size*.018,-.65);
+  drawScrew(ctx,x+w*.895,y+h*.105,size*.018,.55);
+  drawScrew(ctx,x+w*.105,y+h*.895,size*.018,.35);
+  drawScrew(ctx,x+w*.895,y+h*.895,size*.018,-.45);
+
+  return {x,y,w,h};
+}
+
+function drawBezel(ctx,cx,cy,size){
+  const outer=size*.355;
+  const inner=size*.296;
+
+  // recessed cavity
+  const cav=ctx.createRadialGradient(cx,cy,inner*.7,cx,cy,outer);
+  cav.addColorStop(0,'#121416');
+  cav.addColorStop(.74,'#080a0b');
+  cav.addColorStop(1,'#010202');
+  ctx.fillStyle=cav;
+  ctx.beginPath();
+  ctx.arc(cx,cy,outer,0,Math.PI*2);
+  ctx.fill();
+
+  // black painted ring
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx,cy,outer,0,Math.PI*2);
+  ctx.arc(cx,cy,inner,0,Math.PI*2,true);
+  ctx.closePath();
+
+  const ring=ctx.createLinearGradient(cx-outer,cy-outer,cx+outer,cy+outer);
+  ring.addColorStop(0,'#454a4d');
+  ring.addColorStop(.18,'#2c3033');
+  ring.addColorStop(.5,'#181b1d');
+  ring.addColorStop(.82,'#292d30');
+  ring.addColorStop(1,'#4b5054');
+  ctx.fillStyle=ring;
+  ctx.fill('evenodd');
+
+  ctx.clip('evenodd');
+  for(let i=0;i<450;i++){
+    const a=i/450*Math.PI*2;
+    const r1=inner+(outer-inner)*(.08+.18*seed(i*3.5));
+    const r2=outer-(outer-inner)*(.06+.13*seed(i*4.7));
+    const al=.008+seed(i*6.3)*.018;
+    ctx.strokeStyle=i%2===0
+      ? `rgba(255,255,255,${al})`
+      : `rgba(0,0,0,${al*1.15})`;
+    ctx.lineWidth=.5+seed(i*8.9)*.7;
+    ctx.beginPath();
+    ctx.moveTo(cx+Math.cos(a)*r1,cy+Math.sin(a)*r1);
+    ctx.lineTo(cx+Math.cos(a)*r2,cy+Math.sin(a)*r2);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  ctx.strokeStyle='rgba(0,0,0,.78)';
+  ctx.lineWidth=size*.011;
+  ctx.beginPath();
+  ctx.arc(cx,cy,inner,0,Math.PI*2);
+  ctx.stroke();
+
+  return {outer,inner};
+}
+
+function angleForFpm(fpm){
+  // 0 at left, climb clockwise upward/right; descend clockwise downward/right.
+  // Full useful range is +/- 6000 fpm.
+  const v=Math.max(-6000,Math.min(6000,fpm));
+  if(v>=0){
+    return Math.PI + (v/6000)*Math.PI;
+  }
+  return Math.PI - ((-v)/6000)*Math.PI;
+}
+
+function drawDial(ctx,cx,cy,size,innerR){
+  const r=innerR*.94;
+
+  // dial face
+  const face=ctx.createRadialGradient(cx-size*.06,cy-size*.08,size*.02,cx,cy,r);
+  face.addColorStop(0,'#232628');
+  face.addColorStop(.62,'#101213');
+  face.addColorStop(1,'#070809');
+  ctx.fillStyle=face;
+  ctx.beginPath();
+  ctx.arc(cx,cy,r,0,Math.PI*2);
+  ctx.fill();
+
+  // subtle dial texture
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx,cy,r,0,Math.PI*2);
+  ctx.clip();
+  for(let i=0;i<1500;i++){
+    const a=seed(i*7.1)*Math.PI*2;
+    const rr=Math.sqrt(seed(i*3.4))*r;
+    const px=cx+Math.cos(a)*rr;
+    const py=cy+Math.sin(a)*rr;
+    const al=.008+seed(i*5.8)*.018;
+    ctx.fillStyle=seed(i*9.2)>.5
+      ? `rgba(255,255,255,${al})`
+      : `rgba(0,0,0,${al})`;
+    ctx.fillRect(px,py,size*.0012,size*.0012);
+  }
+  ctx.restore();
+
+  // tick marks
+  ctx.save();
+  ctx.translate(cx,cy);
+  ctx.strokeStyle='#f3f3ef';
+  ctx.fillStyle='#f3f3ef';
+
+  // 60 small divisions around circle = 100 fpm per division if 6000 full semi scale mapping style
+  for(let i=0;i<60;i++){
+    const a=i/60*Math.PI*2;
+    const isMajor=i%5===0;
+    const isMid=i%5===0 ? false : i%2===0;
+    const outer=r*.91;
+    const inner=isMajor ? r*.74 : (isMid ? r*.79 : r*.82);
+    const x1=Math.cos(a)*inner;
+    const y1=Math.sin(a)*inner;
+    const x2=Math.cos(a)*outer;
+    const y2=Math.sin(a)*outer;
+    ctx.lineWidth=isMajor?size*.005:size*.0025;
+    ctx.beginPath();
+    ctx.moveTo(x1,y1);
+    ctx.lineTo(x2,y2);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // labels: 0 left, 2 top, 4 upper-right, 6 right, 4 lower-right, 2 bottom
+  ctx.fillStyle='#f3f3ef';
+  ctx.font=`bold ${Math.round(size*.058)}px Arial`;
+  ctx.textAlign='center';
+  ctx.textBaseline='middle';
+
+  const labels=[
+    ['0',Math.PI],
+    ['2',Math.PI*1.5],
+    ['4',Math.PI*1.75],
+    ['6',0],
+    ['4',Math.PI*.25],
+    ['2',Math.PI*.5]
+  ];
+
+  labels.forEach(([txt,a])=>{
+    const rr=r*.60;
+    ctx.fillText(txt,cx+Math.cos(a)*rr,cy+Math.sin(a)*rr);
+  });
+
+  // small .5 marks left upper/lower
+  ctx.font=`bold ${Math.round(size*.039)}px Arial`;
+  ctx.fillText('.5',cx-r*.52,cy-r*.25);
+  ctx.fillText('.5',cx-r*.52,cy+r*.25);
+
+  // center text
+  ctx.fillStyle='#f2f2ee';
+  ctx.font=`bold ${Math.round(size*.024)}px Arial`;
+  ctx.fillText('VERTICAL SPEED',cx,cy-r*.26);
+  ctx.font=`bold ${Math.round(size*.019)}px Arial`;
+  ctx.fillText('THOUSANDS FT / MIN',cx,cy-r*.165);
+
+  // zero bug at left
+  ctx.fillStyle='#f3f3ef';
+  ctx.beginPath();
+  ctx.moveTo(cx-r*.93,cy);
+  ctx.lineTo(cx-r*.84,cy-size*.018);
+  ctx.lineTo(cx-r*.84,cy+size*.018);
+  ctx.closePath();
+  ctx.fill();
+
+  // glass
+  const glass=ctx.createLinearGradient(cx-r,cy-r,cx+r,cy+r);
+  glass.addColorStop(0,'rgba(255,255,255,.10)');
+  glass.addColorStop(.16,'rgba(255,255,255,.035)');
+  glass.addColorStop(.42,'rgba(255,255,255,0)');
+  glass.addColorStop(1,'rgba(0,0,0,.06)');
+  ctx.fillStyle=glass;
+  ctx.beginPath();
+  ctx.arc(cx,cy,r,0,Math.PI*2);
+  ctx.fill();
+
+  return r;
+}
+
+function drawNeedle(ctx,cx,cy,r,size,fpm){
+  const a=angleForFpm(fpm);
+
+  ctx.save();
+  ctx.translate(cx,cy);
+  ctx.rotate(a);
+
+  // shadow
+  ctx.shadowColor='rgba(0,0,0,.55)';
+  ctx.shadowBlur=size*.008;
+  ctx.shadowOffsetX=size*.006;
+  ctx.shadowOffsetY=size*.006;
+
+  // tapered white needle
+  ctx.fillStyle='#f0f0ec';
+  ctx.beginPath();
+  ctx.moveTo(-size*.035,-size*.012);
+  ctx.lineTo(r*.76,-size*.010);
+  ctx.lineTo(r*.86,0);
+  ctx.lineTo(r*.76,size*.010);
+  ctx.lineTo(-size*.035,size*.012);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.shadowColor='transparent';
+
+  // black edge
+  ctx.strokeStyle='rgba(20,20,20,.55)';
+  ctx.lineWidth=size*.002;
+  ctx.stroke();
+
+  ctx.restore();
+
+  // center hub
+  const hub=ctx.createRadialGradient(cx-size*.008,cy-size*.008,size*.004,cx,cy,size*.035);
+  hub.addColorStop(0,'#4f5151');
+  hub.addColorStop(.5,'#202223');
+  hub.addColorStop(1,'#080909');
+  ctx.fillStyle=hub;
+  ctx.beginPath();
+  ctx.arc(cx,cy,size*.034,0,Math.PI*2);
+  ctx.fill();
+
+  ctx.strokeStyle='#060707';
+  ctx.lineWidth=size*.004;
+  ctx.stroke();
+}
+
+function draw(){
+  const {ctx,w,h}=fitCanvas(canvas);
+  ctx.clearRect(0,0,w,h);
+
+  const size=Math.min(w,h);
+  const cx=w/2;
+  const cy=h/2;
+
+  ctx.fillStyle='#111416';
+  ctx.fillRect(0,0,w,h);
+
+  drawHousing(ctx,cx,cy,size);
+  const bezel=drawBezel(ctx,cx,cy,size);
+  const dialR=drawDial(ctx,cx,cy,size,bezel.inner);
+  drawNeedle(ctx,cx,cy,dialR,size,state.fpm);
+}
+
+window.addEventListener('resize',draw);
+
+let t0=performance.now();
+function animate(ts){
+  state.fpm += (state.targetFpm - state.fpm) * 0.12;
+  draw();
+  requestAnimationFrame(animate);
+}
+
+draw();
+requestAnimationFrame(animate);
+
+})();
+</script>
+<script>
+(function(){
+
+const canvas = document.getElementById('speedCanvas');
+const statusEl = document.getElementById('speedStatus');
+
+const state = {
+  knots: 0,
+  targetKnots: 0,
+  gpsActive: false,
+  accuracy: null,
+  lastFix: null,
+  error: ''
+};
+
+window.setGroundSpeedKnots = function(knots){
+  if (!Number.isFinite(knots)) return;
+  state.targetKnots = Math.max(0, knots);
+  state.gpsActive = true;
+  state.error = '';
+};
+
+function fitCanvas(c){
+  const rect=c.getBoundingClientRect();
+  const dpr=window.devicePixelRatio||1;
+  const w=Math.max(1,Math.round(rect.width*dpr));
+  const h=Math.max(1,Math.round(rect.height*dpr));
+  if(c.width!==w||c.height!==h){c.width=w;c.height=h;}
+  return {ctx:c.getContext('2d'),w,h};
+}
+function roundedRect(ctx,x,y,w,h,r){
+  r=Math.min(r,w/2,h/2);
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);
+  ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath();
+}
+function seed(n){
+  const x=Math.sin(n*12.9898+78.233)*43758.5453;
+  return x-Math.floor(x);
+}
+function drawScrew(ctx,cx,cy,r,angle){
+  const g=ctx.createRadialGradient(cx-r*.3,cy-r*.3,r*.08,cx,cy,r);
+  g.addColorStop(0,'#6d7376');
+  g.addColorStop(.45,'#3b4144');
+  g.addColorStop(1,'#111416');
+  ctx.fillStyle=g;
+  ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='#080a0b';ctx.lineWidth=r*.18;ctx.stroke();
+  ctx.save();ctx.translate(cx,cy);ctx.rotate(angle);
+  ctx.strokeStyle='#202529';ctx.lineWidth=r*.17;ctx.lineCap='round';
+  ctx.beginPath();ctx.moveTo(-r*.55,0);ctx.lineTo(r*.55,0);ctx.stroke();
+  ctx.restore();
+}
+function drawHousing(ctx,cx,cy,size){
+  const x=cx-size*.43,y=cy-size*.43,w=size*.86,h=size*.86;
+  const g=ctx.createLinearGradient(x,y,x,y+h);
+  g.addColorStop(0,'#2a2f32');
+  g.addColorStop(.35,'#1c2023');
+  g.addColorStop(1,'#0d0f11');
+  ctx.fillStyle=g;
+  roundedRect(ctx,x,y,w,h,size*.05);ctx.fill();
+
+  ctx.save();
+  roundedRect(ctx,x,y,w,h,size*.05);ctx.clip();
+  for(let i=0;i<2600;i++){
+    const rx=seed(i*2.17),ry=seed(i*6.31);
+    const rr=size*(.0007+seed(i*3.13)*.0019);
+    const a=.008+seed(i*4.7)*.024;
+    ctx.fillStyle=seed(i*8.3)>.48?`rgba(255,255,255,${a})`:`rgba(0,0,0,${a*1.15})`;
+    ctx.beginPath();ctx.arc(x+rx*w,y+ry*h,rr,0,Math.PI*2);ctx.fill();
+  }
+  ctx.restore();
+
+  ctx.strokeStyle='#060708';ctx.lineWidth=size*.009;
+  roundedRect(ctx,x,y,w,h,size*.05);ctx.stroke();
+
+  drawScrew(ctx,x+w*.10,y+h*.10,size*.016,-.55);
+  drawScrew(ctx,x+w*.90,y+h*.10,size*.016,.45);
+  drawScrew(ctx,x+w*.10,y+h*.90,size*.016,.35);
+  drawScrew(ctx,x+w*.90,y+h*.90,size*.016,-.40);
+}
+function drawBezel(ctx,cx,cy,size){
+  const outer=size*.355,inner=size*.305;
+  ctx.fillStyle='#050607';
+  ctx.beginPath();ctx.arc(cx,cy,outer,0,Math.PI*2);ctx.fill();
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx,cy,outer,0,Math.PI*2);
+  ctx.arc(cx,cy,inner,0,Math.PI*2,true);
+  ctx.closePath();
+
+  const g=ctx.createLinearGradient(cx-outer,cy-outer,cx+outer,cy+outer);
+  g.addColorStop(0,'#454a4d');
+  g.addColorStop(.18,'#2b3032');
+  g.addColorStop(.5,'#15181a');
+  g.addColorStop(.82,'#292d30');
+  g.addColorStop(1,'#43484b');
+  ctx.fillStyle=g;ctx.fill('evenodd');
+  ctx.clip('evenodd');
+
+  for(let i=0;i<450;i++){
+    const a=i/450*Math.PI*2;
+    const r1=inner+(outer-inner)*(.05+.23*seed(i*3.9));
+    const r2=outer-(outer-inner)*(.05+.13*seed(i*4.8));
+    const al=.006+seed(i*6.1)*.017;
+    ctx.strokeStyle=i%2?`rgba(255,255,255,${al})`:`rgba(0,0,0,${al})`;
+    ctx.lineWidth=.45+seed(i*7.9)*.8;
+    ctx.beginPath();
+    ctx.moveTo(cx+Math.cos(a)*r1,cy+Math.sin(a)*r1);
+    ctx.lineTo(cx+Math.cos(a)*r2,cy+Math.sin(a)*r2);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  ctx.strokeStyle='rgba(0,0,0,.85)';
+  ctx.lineWidth=size*.010;
+  ctx.beginPath();ctx.arc(cx,cy,inner,0,Math.PI*2);ctx.stroke();
+  return inner;
+}
+
+function speedAngle(knots){
+  // Reference-style scale:
+  // 0 at lower-left, 900 at lower-right, sweeping clockwise across the top.
+  const start = 135 * Math.PI/180;
+  const sweep = 300 * Math.PI/180;
+  const v=Math.max(0,Math.min(900,knots));
+  return start + (v/900)*sweep;
+}
+
+function drawDial(ctx,cx,cy,size,innerR){
+  const r=innerR*.94;
+
+  const face=ctx.createRadialGradient(cx-size*.05,cy-size*.06,size*.02,cx,cy,r);
+  face.addColorStop(0,'#25292a');
+  face.addColorStop(.62,'#121516');
+  face.addColorStop(1,'#080a0a');
+  ctx.fillStyle=face;
+  ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();
+
+  // subtle aged face texture
+  ctx.save();ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.clip();
+  for(let i=0;i<1300;i++){
+    const a=seed(i*5.2)*Math.PI*2;
+    const rr=Math.sqrt(seed(i*2.8))*r;
+    const x=cx+Math.cos(a)*rr,y=cy+Math.sin(a)*rr;
+    const al=.005+seed(i*8.5)*.012;
+    ctx.fillStyle=seed(i*3.3)>.5?`rgba(255,255,220,${al})`:`rgba(0,0,0,${al})`;
+    ctx.fillRect(x,y,size*.0012,size*.0012);
+  }
+  ctx.restore();
+
+  const ink='#d7d69a';
+
+  // 0..900, tick each 10 knots.
+  ctx.save();
+  ctx.translate(cx,cy);
+  ctx.strokeStyle=ink;
+  ctx.fillStyle=ink;
+  ctx.textAlign='center';
+  ctx.textBaseline='middle';
+
+  for(let v=0;v<=900;v+=10){
+    const a=speedAngle(v);
+    const major=(v%100===0);
+    const mid=(v%50===0);
+    const ro=r*.91;
+    const ri=major?r*.76:(mid?r*.79:r*.83);
+    ctx.lineWidth=major?size*.0041:(mid?size*.0031:size*.0022);
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(a)*ri,Math.sin(a)*ri);
+    ctx.lineTo(Math.cos(a)*ro,Math.sin(a)*ro);
+    ctx.stroke();
+  }
+
+  // numbers 0..900
+  ctx.font=`bold ${Math.round(size*.038)}px Arial`;
+  for(let v=0;v<=900;v+=100){
+    const a=speedAngle(v);
+    const rr=r*.64;
+    ctx.fillText(String(v),
+      Math.cos(a)*rr,
+      Math.sin(a)*rr
+    );
+  }
+  ctx.restore();
+
+  // center wording
+  ctx.fillStyle=ink;
+  ctx.textAlign='center';
+  ctx.textBaseline='middle';
+  ctx.font=`bold ${Math.round(size*.033)}px Arial`;
+  ctx.fillText('GROUND',cx,cy+size*.075);
+  ctx.fillText('SPEED',cx,cy+size*.111);
+  ctx.fillText('KNOTS',cx,cy+size*.147);
+
+  // small face screws/marks from the reference
+  function faceDot(dx,dy,rr){
+    const g=ctx.createRadialGradient(cx+dx-rr*.3,cy+dy-rr*.3,rr*.05,cx+dx,cy+dy,rr);
+    g.addColorStop(0,'#454848');g.addColorStop(1,'#111313');
+    ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx+dx,cy+dy,rr,0,Math.PI*2);ctx.fill();
+  }
+  faceDot(0,-r*.55,size*.010);
+  faceDot(-r*.55,r*.45,size*.008);
+  faceDot(r*.52,r*.46,size*.008);
+
+  // glass reflection
+  const glass=ctx.createLinearGradient(cx-r,cy-r,cx+r,cy+r);
+  glass.addColorStop(0,'rgba(255,255,255,.08)');
+  glass.addColorStop(.20,'rgba(255,255,255,.025)');
+  glass.addColorStop(.45,'rgba(255,255,255,0)');
+  glass.addColorStop(1,'rgba(0,0,0,.07)');
+  ctx.fillStyle=glass;
+  ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();
+
+  return r;
+}
+
+function drawNeedle(ctx,cx,cy,r,size,knots){
+  const a=speedAngle(knots);
+  ctx.save();
+  ctx.translate(cx,cy);
+  ctx.rotate(a);
+
+  // black rear counterbalance
+  ctx.fillStyle='#090b0c';
+  ctx.beginPath();
+  ctx.moveTo(-r*.35,-size*.008);
+  ctx.lineTo(-size*.060,-size*.013);
+  ctx.lineTo(-size*.060,size*.013);
+  ctx.lineTo(-r*.35,size*.008);
+  ctx.closePath();
+  ctx.fill();
+
+  // yellow/cream front needle like reference
+  ctx.fillStyle='#d9d491';
+  ctx.beginPath();
+  ctx.moveTo(-size*.018,-size*.010);
+  ctx.lineTo(r*.72,-size*.008);
+  ctx.lineTo(r*.88,0);
+  ctx.lineTo(r*.72,size*.008);
+  ctx.lineTo(-size*.018,size*.010);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.restore();
+
+  // hub
+  const hg=ctx.createRadialGradient(cx-size*.008,cy-size*.008,size*.004,cx,cy,size*.036);
+  hg.addColorStop(0,'#555958');hg.addColorStop(.48,'#26292a');hg.addColorStop(1,'#0b0d0e');
+  ctx.fillStyle=hg;
+  ctx.beginPath();ctx.arc(cx,cy,size*.035,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='#060707';ctx.lineWidth=size*.003;ctx.stroke();
+
+  ctx.fillStyle='#5b4630';
+  ctx.beginPath();ctx.arc(cx,cy,size*.008,0,Math.PI*2);ctx.fill();
+}
+
+function draw(){
+  const {ctx,w,h}=fitCanvas(canvas);
+  ctx.clearRect(0,0,w,h);
+  const size=Math.min(w,h),cx=w/2,cy=h/2;
+  ctx.fillStyle='#111416';ctx.fillRect(0,0,w,h);
+
+  drawHousing(ctx,cx,cy,size);
+  const inner=drawBezel(ctx,cx,cy,size);
+  const r=drawDial(ctx,cx,cy,size,inner);
+
+  state.knots += (state.targetKnots-state.knots)*0.16;
+  drawNeedle(ctx,cx,cy,r,size,state.knots);
+
+  if(state.gpsActive){
+    statusEl.textContent=`GPS ground speed: ${Math.round(state.knots)} kt`;
+  }else if(state.error){
+    statusEl.textContent=state.error;
+  }else{
+    statusEl.textContent='Waiting for GPS speed…';
+  }
+}
+
+// Ground-speed source is native Android GPS speed only. Browser geolocation is intentionally disabled.
+
+window.addEventListener('resize',draw);
+// Native Android supplies GPS speed; browser geolocation is not started.
+
+function animate(){
+  draw();
+  requestAnimationFrame(animate);
+}
+requestAnimationFrame(animate);
+
+})();
+</script>
+
+<script>
+// NAV computer online route retrieval ------------------------------------------------
+// Origin/destination may be IATA (3 letters) or ICAO (4 letters). Android performs
+// the HTTPS lookup so this works inside WebView without relying on browser CORS.
+(function(){
+  const origin = document.getElementById('navOrigin');
+  const destination = document.getElementById('navDestination');
+  const waypointList = document.getElementById('navWaypointList');
+  const navCredit = document.getElementById('navCredit');
+  const fields = [
+    ['flightNavOrigin', origin],
+    ['flightNavDestination', destination]
+  ];
+
+  // Offline fallback routes retained only for testing when Internet lookup fails.
+  const LOCAL_ROUTES = {
+    'PVK>ATH': {
+      route: 'GARTA UL53 PIKAD',
+      originPoint:{name:'PVK', lat:38.925100, lon:20.765800},
+      destinationPoint:{name:'ATH', lat:37.936700, lon:23.944500},
+      waypoints:[
+        {name:'GARTA', lat:38.985000, lon:20.968333},
+        {name:'PIKAD', lat:38.061389, lon:22.697778}
+      ]
+    },
+    'SEA>TWF': {
+      route:'SUMMA2 SUMMA J54 BKE BOI J15 TWF',
+      originPoint:{name:'SEA', lat:47.448889, lon:-122.309444},
+      destinationPoint:{name:'TWF', lat:42.4818092, lon:-114.4877361},
+      waypoints:[
+        {name:'SUMMA', lat:46.6178583, lon:-121.9883222},
+        {name:'BKE', lat:44.8405994, lon:-117.8078683},
+        {name:'BOI', lat:43.5528114, lon:-116.1921256}
+      ]
+    }
+  };
+
+  const aliases={
+    'KSEA':'SEA','SEA':'SEA','KTWF':'TWF','TWF':'TWF',
+    'LGPZ':'PVK','PVK':'PVK','LGAV':'ATH','ATH':'ATH'
+  };
+
+  let onlineRoute=null;
+  let lookupTimer=null;
+  let lookupSerial=0;
+  let activeWaypointIndex=0;
+  let lastNavLat=NaN;
+  let lastNavLon=NaN;
+  const SAVED_PLAN_KEY='ianPreloadedFlightPlanV1';
+
+  function cleanCode(v){
+    return (v||'').toUpperCase().replace(/[^A-Z]/g,'').slice(0,4);
+  }
+  function localKey(){
+    const a=aliases[cleanCode(origin.value)]||cleanCode(origin.value);
+    const b=aliases[cleanCode(destination.value)]||cleanCode(destination.value);
+    return a+'>'+b;
+  }
+  function haversineNm(lat1,lon1,lat2,lon2){
+    const R=3440.065,toRad=d=>d*Math.PI/180;
+    const p1=toRad(lat1),p2=toRad(lat2);
+    const dp=toRad(lat2-lat1),dl=toRad(lon2-lon1);
+    const a=Math.sin(dp/2)**2+Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)**2;
+    return 2*R*Math.asin(Math.sqrt(a));
+  }
+  function trueBearing(lat1,lon1,lat2,lon2){
+    const toRad=d=>d*Math.PI/180,toDeg=r=>r*180/Math.PI;
+    const p1=toRad(lat1),p2=toRad(lat2),dl=toRad(lon2-lon1);
+    const y=Math.sin(dl)*Math.cos(p2);
+    const x=Math.cos(p1)*Math.sin(p2)-Math.sin(p1)*Math.cos(p2)*Math.cos(dl);
+    return (toDeg(Math.atan2(y,x))+360)%360;
+  }
+  function calculateRoute(route){
+    if(!route) return null;
+    const points=[];
+    if(route.originPoint) points.push(route.originPoint);
+    (route.waypoints||[]).forEach(w=>points.push(w));
+    if(route.destinationPoint){
+      const last=points[points.length-1];
+      if(!last || last.name!==route.destinationPoint.name) points.push(route.destinationPoint);
+    }
+    let totalNm=0;
+    const legs=[];
+    for(let i=0;i<points.length-1;i++){
+      const a=points[i],b=points[i+1];
+      const nm=haversineNm(a.lat,a.lon,b.lat,b.lon);
+      totalNm+=nm;
+      legs.push({from:a.name,to:b.name,distanceNm:nm,bearingDeg:trueBearing(a.lat,a.lon,b.lat,b.lon)});
+    }
+    return {totalNm,legs};
+  }
+
+  function showMessage(text){
+    waypointList.innerHTML='';
+    const row=document.createElement('div');
+    row.className='nav-wpt-row nav-empty';
+    row.textContent=text;
+    waypointList.appendChild(row);
+  }
+
+  function formatHeading(deg){
+    if(!Number.isFinite(deg)) return '---°';
+    return String(Math.round((deg%360+360)%360)).padStart(3,'0')+'°';
+  }
+
+  function setActiveWaypoint(index){
+    const fp=window.currentFlightPlan;
+    const list=fp&&Array.isArray(fp.waypoints)?fp.waypoints:[];
+    if(!list.length){
+      activeWaypointIndex=0;
+      if(window.setNavBearing) window.setNavBearing(NaN);
+      return;
+    }
+    activeWaypointIndex=Math.max(0,Math.min(index,list.length-1));
+    waypointList.querySelectorAll('.nav-wpt-row').forEach((row,i)=>{
+      row.classList.toggle('nav-active',i===activeWaypointIndex);
+      const hdg=row.querySelector('.nav-wpt-bearing');
+      const wp=list[i];
+      if(hdg&&wp) hdg.textContent=formatHeading(wp.plannedBearingDeg);
+    });
+    updateNavGuidance();
+  }
+
+  function updateNavGuidance(){
+    const fp=window.currentFlightPlan;
+    const list=fp&&Array.isArray(fp.waypoints)?fp.waypoints:[];
+    if(!list.length){
+      if(window.setNavBearing) window.setNavBearing(NaN);
+      return;
+    }
+    const target=list[Math.max(0,Math.min(activeWaypointIndex,list.length-1))];
+    let bearing=Number.isFinite(target.plannedBearingDeg)?target.plannedBearingDeg:NaN;
+    if(Number.isFinite(lastNavLat)&&Number.isFinite(lastNavLon)&&Number.isFinite(target.lat)&&Number.isFinite(target.lon)){
+      bearing=trueBearing(lastNavLat,lastNavLon,target.lat,target.lon);
+    }
+    if(window.setNavBearing) window.setNavBearing(bearing);
+    const activeRow=waypointList.querySelectorAll('.nav-wpt-row')[activeWaypointIndex];
+    const activeHdg=activeRow&&activeRow.querySelector('.nav-wpt-bearing');
+    if(activeHdg) activeHdg.textContent=formatHeading(bearing);
+  }
+
+  window.updateNavPosition=function(lat,lon){
+    if(!Number.isFinite(lat)||!Number.isFinite(lon)) return;
+    lastNavLat=lat; lastNavLon=lon;
+    updateNavGuidance();
+  };
+
+  function renderRoute(route,source){
+    waypointList.innerHTML='';
+    if(!route){
+      window.currentFlightPlan=null;
+      if(window.setNavBearing) window.setNavBearing(NaN);
+      showMessage('ROUTE NOT FOUND');
+      return;
+    }
+
+    const geometry=calculateRoute(route);
+    window.currentFlightPlan={
+      origin:cleanCode(origin.value),
+      destination:cleanCode(destination.value),
+      routeString:route.route||'',
+      waypoints:(route.waypoints||[]).map((w,i)=>({
+        ...w,
+        plannedBearingDeg:geometry&&geometry.legs&&geometry.legs[i]?geometry.legs[i].bearingDeg:NaN
+      })),
+      geometry,
+      source:source||'LOCAL'
+    };
+    activeWaypointIndex=0;
+
+    const list=route.waypoints||[];
+    if(!list.length){
+      showMessage('DIRECT / NO INTERMEDIATE WPTS');
+      return;
+    }
+
+    list.forEach((w,i)=>{
+      const row=document.createElement('div');
+      row.className='nav-wpt-row';
+      const idx=document.createElement('span');
+      idx.className='nav-wpt-index';
+      idx.textContent=String(i+1).padStart(2,'0');
+      const label=document.createElement('span');
+      label.className='nav-wpt-name';
+      label.textContent=w.name;
+      const heading=document.createElement('span');
+      heading.className='nav-wpt-bearing';
+      const distance=document.createElement('span');
+      distance.className='nav-wpt-distance';
+      const leg=geometry&&geometry.legs?geometry.legs[i]:null;
+      heading.textContent=leg?formatHeading(leg.bearingDeg):'---°';
+      distance.textContent=leg?Math.round(leg.distanceNm*1.150779448)+' MI':'-- MI';
+      row.append(idx,label,heading,distance);
+      row.addEventListener('click',e=>{
+        e.stopPropagation();
+        setActiveWaypoint(i);
+      });
+      waypointList.appendChild(row);
+    });
+    setActiveWaypoint(0);
+  }
+
+  function savePreloadedPlan(route,meta){
+    if(!route) return;
+    const record={
+      version:1,
+      savedAt:Date.now(),
+      requestOrigin:cleanCode((meta&&meta.requestOrigin)||origin.value),
+      requestDestination:cleanCode((meta&&meta.requestDestination)||destination.value),
+      fromIATA:(meta&&meta.fromIATA)||'',
+      fromICAO:(meta&&meta.fromICAO)||'',
+      toIATA:(meta&&meta.toIATA)||'',
+      toICAO:(meta&&meta.toICAO)||'',
+      route:{
+        route:route.route||'',
+        originPoint:route.originPoint||null,
+        destinationPoint:route.destinationPoint||null,
+        waypoints:Array.isArray(route.waypoints)?route.waypoints:[]
+      }
+    };
+    try{ localStorage.setItem(SAVED_PLAN_KEY,JSON.stringify(record)); }catch(e){}
+  }
+
+  function loadPreloadedPlan(){
+    try{
+      const record=JSON.parse(localStorage.getItem(SAVED_PLAN_KEY)||'null');
+      if(!record || record.version!==1 || !record.route) return null;
+      if(!Array.isArray(record.route.waypoints)) return null;
+      return record;
+    }catch(e){
+      return null;
+    }
+  }
+
+  function preloadedCredit(record){
+    const left=((record.fromIATA||record.requestOrigin||'')+(record.fromICAO?'/'+record.fromICAO:''));
+    const right=((record.toIATA||record.requestDestination||'')+(record.toICAO?'/'+record.toICAO:''));
+    return (left&&right?left+' → '+right+' · ':'')+'PRELOADED FLIGHT PLAN · AVAILABLE OFFLINE';
+  }
+
+  function requestOnlineRoute(){
+    clearTimeout(lookupTimer);
+    const o=cleanCode(origin.value),d=cleanCode(destination.value);
+    onlineRoute=null;
+
+    if(o.length<3 || d.length<3){
+      showMessage((o||d)?'ENTER 3-4 LETTER CODES':'ENTER ORIGIN / DESTINATION');
+      return;
+    }
+
+    const serial=++lookupSerial;
+    lookupTimer=setTimeout(()=>{
+      if(serial!==lookupSerial) return;
+      showMessage('SEARCHING ONLINE...');
+      navCredit.textContent='SEARCHING FLIGHT PLAN DATABASE · SIM ONLY';
+      if(window.AndroidRoute && typeof window.AndroidRoute.requestRoute==='function'){
+        window.AndroidRoute.requestRoute(o,d);
+      }else{
+        const local=LOCAL_ROUTES[localKey()]||null;
+        renderRoute(local,'LOCAL TEST');
+        navCredit.textContent='OFFLINE TEST ROUTE · SIM ONLY';
+      }
+    },650);
+  }
+
+  window.receiveOnlineRoute=function(payload){
+    try{
+      if(!payload) throw new Error('empty');
+      const o=cleanCode(origin.value),d=cleanCode(destination.value);
+      if(payload.requestOrigin!==o || payload.requestDestination!==d) return;
+
+      const route={
+        route:payload.routeString||'',
+        originPoint:payload.originPoint,
+        destinationPoint:payload.destinationPoint,
+        waypoints:Array.isArray(payload.waypoints)?payload.waypoints:[]
+      };
+      onlineRoute=route;
+      savePreloadedPlan(route,payload);
+      renderRoute(route,'FLIGHT PLAN DATABASE');
+      const resolvedFrom=(payload.fromIATA||payload.requestOrigin||'')+'/'+(payload.fromICAO||'');
+      const resolvedTo=(payload.toIATA||payload.requestDestination||'')+'/'+(payload.toICAO||'');
+      navCredit.innerHTML=resolvedFrom+' → '+resolvedTo+' · USING DATA FROM <a href="https://flightplandatabase.com/">FLIGHT PLAN DATABASE</a> · SIM ONLY';
+    }catch(e){
+      window.receiveOnlineRouteError({requestOrigin:cleanCode(origin.value),requestDestination:cleanCode(destination.value),message:'ROUTE DATA ERROR'});
+    }
+  };
+
+  window.receiveOnlineRouteError=function(error){
+    const o=cleanCode(origin.value),d=cleanCode(destination.value);
+    if(error && (error.requestOrigin!==o || error.requestDestination!==d)) return;
+    const local=LOCAL_ROUTES[localKey()]||null;
+    if(local){
+      renderRoute(local,'LOCAL FALLBACK');
+      navCredit.textContent='ONLINE FAILED · LOCAL TEST ROUTE · SIM ONLY';
+    }else{
+      renderRoute(null);
+      navCredit.textContent=(error&&error.message?error.message:'ONLINE ROUTE ERROR')+' · SIM ONLY';
+    }
+  };
+
+  fields.forEach(([key,input])=>{
+    try{
+      const saved=localStorage.getItem(key);
+      if(saved) input.value=saved;
+    }catch(e){}
+    input.addEventListener('input',()=>{
+      input.value=cleanCode(input.value);
+      try{localStorage.setItem(key,input.value);}catch(e){}
+      requestOnlineRoute();
+    });
+    input.addEventListener('change',requestOnlineRoute);
+    input.addEventListener('blur',requestOnlineRoute);
+    input.addEventListener('click',e=>e.stopPropagation());
+    input.addEventListener('pointerdown',e=>e.stopPropagation());
+    input.addEventListener('touchstart',e=>e.stopPropagation(),{passive:true});
+  });
+
+  // A flight plan is prepared before flight. Restore the last successfully loaded
+  // complete plan immediately at startup so the NAV display is ready even without
+  // Internet access. Online lookup is performed only when the pilot changes the
+  // origin/destination fields.
+  const preloadedPlan=loadPreloadedPlan();
+  if(preloadedPlan){
+    if(preloadedPlan.requestOrigin) origin.value=cleanCode(preloadedPlan.requestOrigin);
+    if(preloadedPlan.requestDestination) destination.value=cleanCode(preloadedPlan.requestDestination);
+    try{
+      localStorage.setItem('flightNavOrigin',origin.value);
+      localStorage.setItem('flightNavDestination',destination.value);
+    }catch(e){}
+    onlineRoute=preloadedPlan.route;
+    renderRoute(preloadedPlan.route,'PRELOADED');
+    navCredit.textContent=preloadedCredit(preloadedPlan);
+  }else{
+    requestOnlineRoute();
+  }
+})();
+</script>
+
+<script>
+// Floating instrument controls -------------------------------------------------
+// Android WebView touch handling is explicit here. We do not rely on
+// setPointerCapture(), which is inconsistent on some OxygenOS/WebView versions.
+(function(){
+  const panel = document.querySelector('.panel');
+  const attitude = document.getElementById('attitudeWindow');
+  const nav = document.getElementById('navWindow');
+  const attDrag = document.getElementById('attitudeDragHandle');
+  const attResize = document.getElementById('attitudeResizeHandle');
+  const navDrag = document.getElementById('navDragHandle');
+  const navResize = document.getElementById('navResizeHandle');
+
+  const KEYS = {
+    att:'ianFloatAttitudeV2',
+    nav:'ianFloatNavV2'
+  };
+
+  function panelRect(){ return panel.getBoundingClientRect(); }
+  function clamp(v,min,max){ return Math.max(min,Math.min(max,v)); }
+  function pointFromEvent(e){
+    const t=(e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0]);
+    return t ? {x:t.clientX,y:t.clientY} : {x:e.clientX,y:e.clientY};
+  }
+
+  function defaultGeometry(){
+    const pr=panelRect();
+    const cell=pr.width/2;
+    const fixedBlockH=pr.width;
+    const floatY=Math.max(0, pr.height-fixedBlockH-cell);
+    return {
+      att:{x:0,y:floatY,w:cell,h:cell},
+      nav:{x:cell,y:floatY,w:cell,h:cell}
+    };
+  }
+
+  function load(key){
+    try{
+      const v=JSON.parse(localStorage.getItem(key)||'null');
+      return v && Number.isFinite(v.x) && Number.isFinite(v.y) &&
+             Number.isFinite(v.w) && Number.isFinite(v.h) ? v : null;
+    }catch(e){ return null; }
+  }
+  function save(key,g){
+    try{ localStorage.setItem(key,JSON.stringify(g)); }catch(e){}
+  }
+
+  function fitAtt(g){
+    const pr=panelRect();
+    const min=Math.min(130,pr.width);
+    const max=Math.max(min,Math.min(pr.width,pr.height));
+    const size=clamp(Math.min(g.w,g.h),min,max);
+    return {
+      x:clamp(g.x,0,Math.max(0,pr.width-size)),
+      y:clamp(g.y,0,Math.max(0,pr.height-size)),
+      w:size,h:size
+    };
+  }
+  function fitNav(g){
+    const pr=panelRect();
+    const minW=Math.min(130,pr.width);
+    const w=clamp(g.w,minW,pr.width);
+    const x=clamp(g.x,0,Math.max(0,pr.width-w));
+    const y=clamp(g.y,0,Math.max(0,pr.height-100));
+    const h=clamp(g.h,100,Math.max(100,pr.height-y));
+    return {x,y,w,h};
+  }
+  function apply(el,g){
+    el.style.left=g.x+'px';
+    el.style.top=g.y+'px';
+    el.style.width=g.w+'px';
+    el.style.height=g.h+'px';
+  }
+
+  let defaults=defaultGeometry();
+  let attG=fitAtt(load(KEYS.att)||defaults.att);
+  let navG=fitNav(load(KEYS.nav)||defaults.nav);
+  apply(attitude,attG);
+  apply(nav,navG);
+
+  function bindGesture(startEl, onMove, onEnd){
+    let active=false;
+    let touchId=null;
+
+    function start(e){
+      if(e.type==='mousedown' && e.button!==0) return;
+      e.preventDefault();
+      e.stopPropagation();
+      active=true;
+      if(e.changedTouches && e.changedTouches.length) touchId=e.changedTouches[0].identifier;
+      onMove('start', pointFromEvent(e), e);
+
+      document.addEventListener('touchmove', move, {passive:false});
+      document.addEventListener('touchend', end, {passive:false});
+      document.addEventListener('touchcancel', end, {passive:false});
+      document.addEventListener('mousemove', move, false);
+      document.addEventListener('mouseup', end, false);
+    }
+    function move(e){
+      if(!active) return;
+      e.preventDefault();
+      onMove('move', pointFromEvent(e), e);
+    }
+    function end(e){
+      if(!active) return;
+      if(e.cancelable) e.preventDefault();
+      active=false;
+      touchId=null;
+      document.removeEventListener('touchmove', move, false);
+      document.removeEventListener('touchend', end, false);
+      document.removeEventListener('touchcancel', end, false);
+      document.removeEventListener('mousemove', move, false);
+      document.removeEventListener('mouseup', end, false);
+      if(onEnd) onEnd(e);
+    }
+
+    startEl.addEventListener('touchstart', start, {passive:false});
+    startEl.addEventListener('mousedown', start, false);
+  }
+
+  function bindDrag(startEl, which){
+    let startP=null,g0=null;
+    bindGesture(startEl,(phase,p)=>{
+      if(phase==='start'){
+        startP=p;
+        g0={...(which==='att'?attG:navG)};
+        return;
+      }
+      const candidate={...g0,x:g0.x+p.x-startP.x,y:g0.y+p.y-startP.y};
+      if(which==='att'){
+        attG=fitAtt(candidate); apply(attitude,attG);
+      }else{
+        navG=fitNav(candidate); apply(nav,navG);
+      }
+    },()=>save(which==='att'?KEYS.att:KEYS.nav,which==='att'?attG:navG));
+  }
+
+  // Artificial horizon can be moved by touching the face itself or its top grip.
+  // The resize corner is excluded so resizing never starts a drag.
+  let attFaceStart=null,attFaceG0=null;
+  function attitudeFaceStart(e){
+    if(e.target===attResize || attResize.contains(e.target) || e.target===attDrag || attDrag.contains(e.target)) return;
+    if(e.target && (e.target.tagName==='INPUT' || e.target.tagName==='BUTTON')) return;
+    e.preventDefault(); e.stopPropagation();
+    attFaceStart=pointFromEvent(e); attFaceG0={...attG};
+    const move=ev=>{
+      ev.preventDefault();
+      const p=pointFromEvent(ev);
+      attG=fitAtt({...attFaceG0,x:attFaceG0.x+p.x-attFaceStart.x,y:attFaceG0.y+p.y-attFaceStart.y});
+      apply(attitude,attG);
+    };
+    const end=ev=>{
+      if(ev.cancelable) ev.preventDefault();
+      document.removeEventListener('touchmove',move,false);
+      document.removeEventListener('touchend',end,false);
+      document.removeEventListener('touchcancel',end,false);
+      document.removeEventListener('mousemove',move,false);
+      document.removeEventListener('mouseup',end,false);
+      save(KEYS.att,attG);
+    };
+    document.addEventListener('touchmove',move,{passive:false});
+    document.addEventListener('touchend',end,{passive:false});
+    document.addEventListener('touchcancel',end,{passive:false});
+    document.addEventListener('mousemove',move,false);
+    document.addEventListener('mouseup',end,false);
+  }
+  attitude.addEventListener('touchstart',attitudeFaceStart,{passive:false});
+  attitude.addEventListener('mousedown',attitudeFaceStart,false);
+
+  bindDrag(attDrag,'att');
+  bindDrag(navDrag,'nav');
+
+  // Proportional/square attitude resize.
+  let arStart=null,arG0=null;
+  bindGesture(attResize,(phase,p)=>{
+    if(phase==='start'){ arStart=p; arG0={...attG}; return; }
+    const pr=panelRect();
+    const maxSize=Math.max(130,Math.min(pr.width-arG0.x,pr.height-arG0.y));
+    const d=Math.max(p.x-arStart.x,p.y-arStart.y);
+    const size=clamp(arG0.w+d,130,maxSize);
+    attG={x:arG0.x,y:arG0.y,w:size,h:size};
+    apply(attitude,attG);
+  },()=>save(KEYS.att,attG));
+
+  // NAV resize is vertical only; width and x stay fixed.
+  let nrStart=null,nrG0=null;
+  bindGesture(navResize,(phase,p)=>{
+    if(phase==='start'){ nrStart=p; nrG0={...navG}; return; }
+    const pr=panelRect();
+    const maxH=Math.max(100,pr.height-nrG0.y);
+    navG={...nrG0,h:clamp(nrG0.h+p.y-nrStart.y,100,maxH)};
+    apply(nav,navG);
+  },()=>save(KEYS.nav,navG));
+
+  let resizeTimer=null;
+  window.addEventListener('resize',()=>{
+    clearTimeout(resizeTimer);
+    resizeTimer=setTimeout(()=>{
+      attG=fitAtt(attG); navG=fitNav(navG);
+      apply(attitude,attG); apply(nav,navG);
+      save(KEYS.att,attG); save(KEYS.nav,navG);
+    },80);
+  });
+
+  // Double tap either top grip resets the floating geometry.
+  let lastTap=0;
+  function resetOnDoubleTap(e){
+    const now=Date.now();
+    if(now-lastTap<350){
+      defaults=defaultGeometry();
+      attG=fitAtt(defaults.att); navG=fitNav(defaults.nav);
+      apply(attitude,attG); apply(nav,navG);
+      save(KEYS.att,attG); save(KEYS.nav,navG);
+      lastTap=0;
+      if(e.cancelable) e.preventDefault();
+    }else lastTap=now;
+  }
+  attDrag.addEventListener('touchend',resetOnDoubleTap,{passive:false});
+  navDrag.addEventListener('touchend',resetOnDoubleTap,{passive:false});
+  attDrag.addEventListener('dblclick',resetOnDoubleTap,false);
+  navDrag.addEventListener('dblclick',resetOnDoubleTap,false);
+
+  function resetViewToDefaults(){
+    try{
+      localStorage.removeItem(KEYS.att);
+      localStorage.removeItem(KEYS.nav);
+    }catch(e){}
+    defaults=defaultGeometry();
+    attG=fitAtt(defaults.att);
+    navG=fitNav(defaults.nav);
+    apply(attitude,attG);
+    apply(nav,navG);
+    save(KEYS.att,attG);
+    save(KEYS.nav,navG);
+  }
+
+  window.resetInstrumentView=resetViewToDefaults;
+  const resetViewBtn=document.getElementById('resetViewBtn');
+  if(resetViewBtn){
+    const doReset=e=>{
+      if(e.cancelable) e.preventDefault();
+      e.stopPropagation();
+      resetViewToDefaults();
+    };
+    resetViewBtn.addEventListener('click',doReset,false);
+    resetViewBtn.addEventListener('touchend',doReset,{passive:false});
+  }
+
+  window.INSTRUMENTS_NAV_FLOATING_BUILD='gps-status-reset-v1-20260818';
+})();
+</script>
+
+<script>
+// Native Android -> instrument panel data entry point.
+// DATA POLICY: heading/track, altitude, ground speed and VSI are GPS-derived only.
+// The artificial horizon alone uses the phone gravity/accelerometer sensor.
+window.updateFlightData = function(data){
+  if (!data) return;
+
+  const gpsStatus=document.getElementById('gpsStatus');
+  if(gpsStatus){
+    const ok=data.gpsOk===true;
+    gpsStatus.classList.toggle('ok',ok);
+    gpsStatus.classList.toggle('bad',!ok);
+    gpsStatus.setAttribute('aria-label',ok?'GPS reception available':'GPS reception unavailable');
+  }
+
+  if (Number.isFinite(data.altitudeM) && window.setGpsAltitudeMeters) {
+    window.setGpsAltitudeMeters(data.altitudeM);
+  }
+  if (Number.isFinite(data.speedKt) && window.setGroundSpeedKnots) {
+    window.setGroundSpeedKnots(data.speedKt);
+  }
+  if (Number.isFinite(data.trackDeg) && window.setGpsHeading) {
+    window.setGpsHeading(data.trackDeg);
+  }
+  if (Number.isFinite(data.lat) && Number.isFinite(data.lon) && window.updateNavPosition) {
+    window.updateNavPosition(data.lat,data.lon);
+  }
+  if (Number.isFinite(data.vsiFpm) && window.setVerticalSpeedFpm) {
+    window.setVerticalSpeedFpm(data.vsiFpm);
+  }
+  if (Number.isFinite(data.pitchDeg) && Number.isFinite(data.rollDeg) && window.setAttitude) {
+    window.setAttitude(data.pitchDeg, data.rollDeg);
+  }
+};
+
+window.nativeFlightDataReady = true;
+</script>
+
+<script>
+// Sensor and GPS permissions are handled by native Android code.
+</script>
+</body>
+</html>

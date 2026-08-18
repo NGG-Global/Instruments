@@ -4,6 +4,10 @@ Native Android app (Kotlin + Jetpack Compose) implementing an aircraft
 instrument panel. `instruments.html` is a frozen visual reference only — do
 not extend it, do not wrap it in a WebView.
 
+`webview-prototype/` is a separate, self-contained project kept for reference
+and test APKs. It is not this app, nothing here depends on it, and the rules
+below do not describe it. Leave it alone unless a task names it explicitly.
+
 ## Commands
 
 ```
